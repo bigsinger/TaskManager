@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD Task Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-title">
+                <h1 data-i18n="title">Task Manager</h1>
+                <h2 id="subtitle" class="subtitle">My Tasks</h2>
+            </div>
+            <div class="header-actions">
+                <div class="filter-buttons">
+                    <button class="filter-btn" data-status="pending" data-i18n="pending">Pending</button>
+                    <button class="filter-btn" data-status="in-progress" data-i18n="inProgress">In Progress</button>
+                    <button class="filter-btn" data-status="completed" data-i18n="completed">Completed</button>
+                </div>
+                <button id="settings-btn" class="btn btn-secondary">⚙️</button>
+                <button id="show-form-btn" class="btn btn-primary" data-i18n="newTask">+ New Task</button>
+            </div>
+        </header>
+
+        <!-- Tag Cloud -->
+        <div class="tag-cloud-section">
+            <h3 data-i18n="tags">Tags</h3>
+            <div id="tag-cloud" class="tag-cloud">
+                <p data-i18n="noTags">No tags yet</p>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 data-i18n="settings">Settings</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label data-i18n="subtitle">Subtitle</label>
+                        <input type="text" id="subtitle-input" placeholder="Enter subtitle">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="theme">Theme</label>
+                        <select id="theme-select">
+                            <option value="light" data-i18n="light">Light</option>
+                            <option value="dark" data-i18n="dark">Dark</option>
+                            <option value="system" data-i18n="system">System</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="language">Language</label>
+                        <select id="language-select">
+                            <option value="en">English</option>
+                            <option value="zh">中文</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-primary" id="save-settings-btn" data-i18n="save">Save</button>
+                        <button type="button" class="btn btn-secondary" id="cancel-settings-btn" data-i18n="cancel">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Form Modal -->
+        <div id="task-form-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="form-title" data-i18n="newTask">New Task</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="task-form">
+                        <input type="hidden" id="task-id">
+                        
+                        <div class="form-group">
+                            <label data-i18n="title">Title *</label>
+                            <input type="text" id="task-title" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label data-i18n="description">Description</label>
+                            <textarea id="task-description" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label data-i18n="status">Status</label>
+                            <select id="task-status">
+                                <option value="pending" data-i18n="pending">Pending</option>
+                                <option value="in-progress" data-i18n="inProgress">In Progress</option>
+                                <option value="completed" data-i18n="completed">Completed</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label data-i18n="tags">Tags</label>
+                            <div class="tags-input-container">
+                                <div id="tags-display" class="tags-display"></div>
+                                <input type="text" id="tags-input" placeholder="Type tag and press Enter">
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" data-i18n="saveTask">Save Task</button>
+                            <button type="button" class="btn btn-secondary" id="cancel-btn" data-i18n="cancel">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task List -->
+        <main>
+            <div id="task-list">
+                <p data-i18n="loading">Loading tasks...</p>
+            </div>
+            
+            <!-- Pagination -->
+            <div id="pagination" class="pagination">
+                <div class="pagination-info">
+                    <span data-i18n="showing">Showing</span> 
+                    <span id="pagination-start">0</span> - <span id="pagination-end">0</span> 
+                    <span data-i18n="of">of</span> <span id="pagination-total">0</span>
+                </div>
+                <div class="pagination-controls">
+                    <button class="pagination-btn" id="first-page" data-i18n="first">First</button>
+                    <button class="pagination-btn" id="prev-page" data-i18n="prev">Previous</button>
+                    <div class="pagination-pages" id="pagination-pages"></div>
+                    <button class="pagination-btn" id="next-page" data-i18n="next">Next</button>
+                    <button class="pagination-btn" id="last-page" data-i18n="last">Last</button>
+                </div>
+                <div class="pagination-size">
+                    <label data-i18n="itemsPerPage">Items per page:</label>
+                    <select id="page-size">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
