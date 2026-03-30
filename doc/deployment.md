@@ -108,6 +108,154 @@ npx prisma generate
 npx prisma migrate dev
 ```
 
+#### 4.1 常见迁移问题及解决方案
+
+##### 问题1：Environment variable not found: DATABASE_URL
+
+**错误信息**：
+```
+Environment variable not found: DATABASE_URL.
+```
+
+**原因**：
+缺少 `.env` 文件或 `.env` 文件中未配置 `DATABASE_URL`。
+
+**解决方案**：
+```bash
+# 1. 创建 .env 文件
+cd src/backend
+cp .env.example .env
+
+# 2. 确认 .env 文件中的 DATABASE_URL 配置正确
+DATABASE_URL="file:./dev.db"
+```
+
+**注意**：
+- `DATABASE_URL` 必须设置为 `file:./dev.db`（SQLite 数据库）
+- 不要使用 PostgreSQL 配置（如 `postgresql://user:password@localhost:5432/task_manager`）
+
+##### 问题2：Prisma Client 生成失败
+
+**错误信息**：
+```
+Error: P3006
+Migration failed to apply.
+```
+
+**原因**：
+数据库文件不存在或权限不足。
+
+**解决方案**：
+```bash
+# 1. 删除旧的数据库文件
+cd src/backend/prisma
+rm -f dev.db dev.db-shm dev.db-wal
+
+# 2. 重新生成 Prisma Client
+cd ..
+npx prisma generate
+
+# 3. 重新运行迁移
+npx prisma migrate dev
+```
+
+##### 问题3：迁移冲突
+
+**错误信息**：
+```
+Error: P3005
+The database schema is not empty.
+```
+
+**原因**：
+数据库已存在数据，与迁移脚本冲突。
+
+**解决方案**：
+```bash
+# 方案1：重置数据库（会丢失所有数据）
+npx prisma migrate reset
+
+# 方案2：手动删除数据库文件
+cd src/backend/prisma
+rm -f dev.db dev.db-shm dev.db-wal
+cd ..
+npx prisma migrate dev
+```
+
+**注意**：
+- 方案1会丢失所有数据，请谨慎使用
+- 方案2也会丢失所有数据，请谨慎使用
+
+##### 问题4：Prisma 版本不兼容
+
+**错误信息**：
+```
+Error: This version of Prisma Client is not compatible with the Prisma schema.
+```
+
+**原因**：
+Prisma Client 版本与 Prisma schema 不匹配。
+
+**解决方案**：
+```bash
+# 1. 重新生成 Prisma Client
+npx prisma generate
+
+# 2. 如果仍然失败，更新 Prisma
+npm install prisma@latest @prisma/client@latest
+
+# 3. 重新生成 Prisma Client
+npx prisma generate
+```
+
+##### 问题5：数据库文件权限问题
+
+**错误信息**：
+```
+Error: EACCES: permission denied, open 'prisma/dev.db'
+```
+
+**原因**：
+数据库文件权限不足。
+
+**解决方案**：
+```bash
+# Linux/Mac
+chmod 644 src/backend/prisma/dev.db
+
+# Windows
+# 右键点击 dev.db 文件 -> 属性 -> 安全 -> 编辑权限
+```
+
+#### 4.2 迁移最佳实践
+
+1. **备份现有数据**
+   ```bash
+   # 备份数据库文件
+   cp src/backend/prisma/dev.db src/backend/prisma/dev.db.backup
+   ```
+
+2. **使用开发环境测试**
+   ```bash
+   # 在开发环境先测试迁移
+   NODE_ENV=development npx prisma migrate dev
+   ```
+
+3. **检查迁移结果**
+   ```bash
+   # 查看迁移历史
+   npx prisma migrate status
+
+   # 查看数据库结构
+   npx prisma studio
+   ```
+
+4. **回滚迁移（如果需要）**
+   ```bash
+   # 回滚到上一个迁移
+   npx prisma migrate resolve --rolled-back [migration-name]
+   ```
+
 ### 5. 构建后端
 
 ```bash

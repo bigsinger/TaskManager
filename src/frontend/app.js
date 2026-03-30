@@ -5,6 +5,29 @@
 const currentOrigin = window.location.origin;
 const API_URL = `${currentOrigin.replace(':3001', ':3000')}/api/tasks`;
 
+// Toast Notifications
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icon = type === 'success' ? '✓' : type === 'warning' ? '⚠' : type === 'error' ? '✕' : 'ℹ';
+    
+    toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <span class="toast-message">${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Remove toast after animation
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
 // Translations
 const translations = {
     en: {
@@ -54,7 +77,9 @@ const translations = {
         tags: 'Tags',
         noTags: 'No tags yet',
         addTag: 'Add tag',
-        removeTag: 'Remove tag'
+        removeTag: 'Remove tag',
+        taskCreatedHidden: 'Task created but not visible under current filters',
+        taskDeleted: 'Task deleted successfully'
     },
     zh: {
         title: '任务管理器',
@@ -103,7 +128,9 @@ const translations = {
         tags: '标签',
         noTags: '暂无标签',
         addTag: '添加标签',
-        removeTag: '移除标签'
+        removeTag: '移除标签',
+        taskCreatedHidden: '任务已创建，但在当前筛选条件下不可见',
+        taskDeleted: '任务删除成功'
     }
 };
 
@@ -230,6 +257,7 @@ tagsInput.addEventListener('keydown', (e) => {
             currentTags.push(tag);
             renderTags();
             tagsInput.value = '';
+            hideTagSuggestions();
         }
     }
 });
@@ -241,7 +269,104 @@ tagsInput.addEventListener('blur', () => {
         renderTags();
         tagsInput.value = '';
     }
+    hideTagSuggestions();
 });
+
+tagsInput.addEventListener('input', () => {
+    const value = tagsInput.value.trim();
+    if (value) {
+        showTagSuggestions(value);
+    } else {
+        hideTagSuggestions();
+    }
+});
+
+// Show tag suggestions
+function showTagSuggestions(input) {
+    const suggestionsContainer = document.getElementById('tag-suggestions');
+    if (!suggestionsContainer) return;
+    
+    // Get all tags from all tasks
+    const allTags = new Set();
+    allTasks.forEach(task => {
+        let tagsArray = [];
+        if (task.tags) {
+            try {
+                tagsArray = typeof task.tags === 'string' ? JSON.parse(task.tags) : task.tags;
+            } catch (e) {
+                tagsArray = [];
+            }
+        }
+        
+        if (Array.isArray(tagsArray)) {
+            tagsArray.forEach(tag => {
+                if (!currentTags.includes(tag)) {
+                    allTags.add(tag);
+                }
+            });
+        }
+    });
+    
+    // Filter tags that match input
+    const matchingTags = Array.from(allTags).filter(tag => 
+        tag.toLowerCase().includes(input.toLowerCase())
+    );
+    
+    if (matchingTags.length === 0) {
+        hideTagSuggestions();
+        return;
+    }
+    
+    // Count tag frequencies
+    const tagCounts = {};
+    allTasks.forEach(task => {
+        let tagsArray = [];
+        if (task.tags) {
+            try {
+                tagsArray = typeof task.tags === 'string' ? JSON.parse(task.tags) : task.tags;
+            } catch (e) {
+                tagsArray = [];
+            }
+        }
+        
+        if (Array.isArray(tagsArray)) {
+            tagsArray.forEach(tag => {
+                tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+            });
+        }
+    });
+    
+    // Sort by frequency (descending)
+    matchingTags.sort((a, b) => (tagCounts[b] || 0) - (tagCounts[a] || 0));
+    
+    // Render suggestions
+    suggestionsContainer.innerHTML = matchingTags.map(tag => `
+        <div class="tag-suggestion-item" onclick="selectTagSuggestion('${escapeHtml(tag)}')">
+            <span class="tag-suggestion-name">${escapeHtml(tag)}</span>
+            <span class="tag-suggestion-count">${tagCounts[tag] || 0}</span>
+        </div>
+    `).join('');
+    
+    suggestionsContainer.classList.add('show');
+}
+
+// Hide tag suggestions
+function hideTagSuggestions() {
+    const suggestionsContainer = document.getElementById('tag-suggestions');
+    if (suggestionsContainer) {
+        suggestionsContainer.classList.remove('show');
+    }
+}
+
+// Select tag suggestion
+function selectTagSuggestion(tag) {
+    if (!currentTags.includes(tag)) {
+        currentTags.push(tag);
+        renderTags();
+        tagsInput.value = '';
+        hideTagSuggestions();
+    }
+}
 
 // Close modals when clicking outside
 modal.addEventListener('click', (e) => {
@@ -413,23 +538,24 @@ function renderTasks(tasks) {
         return `
         <div class="task-item status-${task.status} ${isSelected ? 'selected' : ''}" 
              data-task-id="${task.id}"
-             onclick="selectTask('${task.id}')">
+             onclick="selectTask('${task.id}')"
+             ondblclick="editTask('${task.id}')">
             <div class="task-header">
                 <h3 class="task-title">${escapeHtml(task.title)}</h3>
+                ${tagsHtml}
                 <span class="status-badge status-${task.status}">
                     ${t(statusKey)}
                 </span>
+                <div class="task-actions">
+                    <button class="btn btn-secondary" onclick="event.stopPropagation(); editTask('${task.id}')">${t('edit')}</button>
+                    <button class="btn btn-danger" onclick="event.stopPropagation(); deleteTask('${task.id}')">${t('delete')}</button>
+                </div>
             </div>
             <div class="task-description">
                 ${task.description ? escapeHtml(task.description) : ''}
             </div>
-            ${tagsHtml}
             <div class="task-meta">
                 ${t('created')} ${new Date(task.createdAt + 'Z').toLocaleString()}
-            </div>
-            <div class="task-actions">
-                <button class="btn btn-secondary" onclick="event.stopPropagation(); editTask('${task.id}')">${t('edit')}</button>
-                <button class="btn btn-danger" onclick="event.stopPropagation(); deleteTask('${task.id}')">${t('delete')}</button>
             </div>
         </div>
     `}).join('');
@@ -502,7 +628,15 @@ async function handleFormSubmit(e) {
             await updateTask(taskId, taskData);
         } else {
             // Create new task
-            await createTask(taskData);
+            const newTask = await createTask(taskData);
+            
+            // Check if the new task is visible under current filters
+            const isTaskVisible = isTaskVisibleUnderFilters(newTask);
+            
+            if (!isTaskVisible) {
+                // Show toast notification if task is not visible
+                showToast(t('taskCreatedHidden'), 'warning');
+            }
         }
         
         // Close modal without clearing selected state
@@ -796,6 +930,9 @@ async function deleteTask(taskId) {
             taskElement.style.opacity = '0';
             taskElement.style.transform = 'translateX(-20px)';
             
+            // Show toast notification
+            showToast(t('taskDeleted'), 'success');
+            
             // Remove element after animation
             setTimeout(() => {
                 // Remove from local array
@@ -836,6 +973,34 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Check if task is visible under current filters
+function isTaskVisibleUnderFilters(task) {
+    // Check status filter
+    if (selectedFilters.size > 0 && !selectedFilters.has(task.status)) {
+        return false;
+    }
+    
+    // Check tag filter
+    if (selectedTags.size > 0) {
+        let taskTags = [];
+        if (task.tags) {
+            try {
+                taskTags = typeof task.tags === 'string' ? JSON.parse(task.tags) : task.tags;
+            } catch (e) {
+                taskTags = [];
+            }
+        }
+        
+        // Check if task has any of the selected tags
+        const hasSelectedTag = taskTags.some(tag => selectedTags.has(tag));
+        if (!hasSelectedTag) {
+            return false;
+        }
+    }
+    
+    return true;
 }
 
 // Initialize pagination
