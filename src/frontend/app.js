@@ -288,6 +288,17 @@ function showTagSuggestions(input) {
     
     // Get all tags from all tasks
     const allTags = new Set();
+    
+    // Check if allTasks is loaded
+    if (!allTasks || allTasks.length === 0) {
+        // If allTasks is not loaded, try to load it
+        loadTasks().then(() => {
+            // Retry showing suggestions after loading
+            showTagSuggestions(input);
+        });
+        return;
+    }
+    
     allTasks.forEach(task => {
         let tagsArray = [];
         if (task.tags) {
