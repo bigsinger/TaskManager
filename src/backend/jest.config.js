@@ -1,62 +1,32 @@
+/**
+ * Jest Configuration
+ */
 module.exports = {
-  // 测试环境
+  preset: 'ts-jest',
   testEnvironment: 'node',
-
-  // 测试文件匹配模式
-  testMatch: [
-    '**/tests/**/*.test.js',
-    '**/tests/**/*.spec.js',
-  ],
-
-  // 覆盖率配置
+  roots: ['<rootDir>/src'],
+  testMatch: ['**/__tests__/**/*.test.ts', '**/?(*.)+(spec|test).ts'],
+  transform: {
+    '^.+\\.ts$': 'ts-jest',
+  },
   collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/**/*.test.js',
-    '!src/**/*.spec.js',
-    '!src/config/**',
-    '!src/migrations/**',
+    'src/**/*.ts',
+    '!src/**/*.d.ts',
+    '!src/**/index.ts',
+    '!src/server.ts',
   ],
-
-  // 覆盖率阈值
   coverageThreshold: {
     global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70,
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
     },
   },
-
-  // 覆盖率报告格式
-  coverageReporters: [
-    'text',
-    'text-summary',
-    'html',
-    'lcov',
-  ],
-
-  // 覆盖率输出目录
-  coverageDirectory: 'coverage',
-
-  // 模块路径别名
-  moduleNameMapper: {
+  moduleNameMapping: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-
-  // 测试超时时间
-  testTimeout: 10000,
-
-  // 并行测试
-  maxWorkers: '50%',
-
-  // 详细输出
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
+  testTimeout: 30000,
   verbose: true,
-
-  // 测试设置文件
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
-
-  // 全局变量
-  globals: {
-    'test-jest': true,
-  },
 };
