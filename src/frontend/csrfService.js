@@ -3,7 +3,9 @@
  */
 
 class CsrfService {
-  private csrfToken: string | null = null;
+  constructor() {
+    this.csrfToken = null;
+  }
 
   /**
    * 获取 CSRF Token
@@ -21,50 +23,55 @@ class CsrfService {
 
       return null;
     } catch (error) {
-      console.error('Failed to get CSRF token:', error);
+      console.error('获取 CSRF Token 失败:', error);
       return null;
     }
   }
 
   /**
-   * 获取当前 CSRF Token
+   * 更新 meta 标签
+   */
+  updateMetaTag() {
+    let metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (!metaTag) {
+      metaTag = document.createElement('meta');
+      metaTag.setAttribute('name', 'csrf-token');
+      document.head.appendChild(metaTag);
+    }
+    metaTag.setAttribute('content', this.csrfToken || '');
+  }
+
+  /**
+   * 获取当前 Token
    */
   getToken() {
-    if (!this.csrfToken) {
-      const metaTag = document.querySelector('meta[name="csrf-token"]');
-      if (metaTag) {
-        this.csrfToken = metaTag.getAttribute('content');
-      }
-    }
     return this.csrfToken;
   }
 
   /**
-   * 更新 Meta 标签
+   * 初始化
    */
-  private updateMetaTag() {
-    let metaTag = document.querySelector('meta[name="csrf-token"]');
-
-    if (!metaTag) {
-      metaTag = document.createElement('meta');
-      metaTag.name = 'csrf-token';
-      document.head.appendChild(metaTag);
+  init() {
+    // 从 meta 标签加载
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) {
+      this.csrfToken = metaTag.getAttribute('content');
     }
-
-    if (metaTag && this.csrfToken) {
-      metaTag.setAttribute('content', this.csrfToken);
-    }
+    return Promise.resolve();
   }
 
   /**
-   * 初始化 CSRF Token
+   * 初始化（别名）
    */
-  async initialize() {
-    await this.getCsrfToken();
+  initialize() {
+    return this.init();
   }
 }
 
 // 创建单例
 const csrfService = new CsrfService();
 
-export default csrfService;
+// 导出
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { CsrfService, csrfService };
+}
