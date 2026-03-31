@@ -11,7 +11,8 @@
 
 | Commit | 时间 | 说明 |
 |--------|------|------|
-| 4cfd7ee | 最新 | fix: 修复前端认证和初始化错误 |
+| 6ef3afc | 最新 | feat: 添加自动化测试和自动化部署 |
+| 4cfd7ee | - | fix: 修复前端认证和初始化错误 |
 | 9c19d8e | - | fix: 修复前端多个运行时错误 |
 | 8905477 | - | fix: 修复前端TypeScript语法错误和缺失模块 |
 | 123784e | - | feat: 添加SQLite数据库支持和Express服务器 |
@@ -178,6 +179,36 @@ F:\bigsinger\TaskManager/
    - 语言切换
    - 分页导航
 
+### 4. 自动化测试 (Testing) ✅ 新增
+
+| 类型 | 文件 | 说明 |
+|------|------|------|
+| 后端单元测试 | `src/backend/__tests__/database.test.js` | 数据库操作测试 |
+| 后端集成测试 | `src/backend/__tests__/api.test.js` | API接口测试 |
+| 前端模块测试 | `src/frontend/modules/__tests__/search.test.js` | 搜索模块测试 |
+
+**测试框架**: Jest
+**运行命令**: `npm test`
+
+### 5. 自动化部署 (Deployment) ✅ 新增
+
+**Docker 支持**:
+- `Dockerfile.backend` - 后端容器配置
+- `Dockerfile.frontend` - 前端容器配置
+- `docker-compose.yml` - 服务编排
+- `nginx.conf` - 反向代理配置
+
+**CI/CD 流水线**:
+- `.github/workflows/ci-cd.yml` - GitHub Actions 配置
+- 支持 Node.js 18.x / 20.x 测试矩阵
+- 自动部署到 staging (v2.0) 和 production (main)
+
+**部署命令**:
+```bash
+docker-compose up -d  # 启动服务
+docker-compose down   # 停止服务
+```
+
 ---
 
 ## 📝 备注
@@ -185,9 +216,11 @@ F:\bigsinger\TaskManager/
 - 当前认证为**可选模式**，不强制登录即可使用
 - 如需启用强制登录，取消 app.js 中 `initAuth()` 的注释即可
 - 前后端服务当前正在运行中
+- 自动化测试和部署已配置完成
+- 详细文档见 `doc/testing-deployment.md`
 - 如有新需求，请随时指示
 
 ---
 
-**状态**: 等待主人测试反馈
-**下一步**: 根据测试结果继续修复或开发新功能
+**状态**: 自动化测试和部署已配置完成
+**下一步**: 等待主人测试验证
