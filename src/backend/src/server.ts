@@ -5,12 +5,25 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
+import session from 'express-session';
 import dotenv from 'dotenv';
 import logger from './infrastructure/logging/WinstonLogger';
 import cacheService from './infrastructure/cache/RedisCacheService';
 import taskRoutes from './adapters/routes/task.routes';
 import authRoutes from './adapters/routes/auth.routes';
+import auditLogRoutes from './adapters/routes/auditLog.routes';
 import { errorHandler, notFoundHandler } from './adapters/middleware/error.middleware';
+import { csrfMiddleware, getCsrfTokenMiddleware } from './infrastructure/middleware/csrf';
+import {
+  globalLimiter,
+  authLimiter,
+  ipLimiter,
+  userLimiter,
+  taskCreateLimiter,
+  taskUpdateLimiter,
+  taskDeleteLimiter
+} from './infrastructure/middleware/rateLimit';
 
 // Load environment variables
 dotenv.config();
@@ -28,22 +41,48 @@ app.use(cors({
   credentials: true
 }));
 
+// Cookie parser
+app.use(cookieParser());
+
+// Session
+app.use(session({
+  secret: process.env['SESSION_SECRET'] || 'your-session-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env['NODE_ENV'] === 'production',
+    httpOnly: true,
+    sameSite: 'strict'
+  }
+}));
+
 // Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '60000'),
-  max: parseInt(process.env['RATE_LIMIT_MAX_REQUESTS'] || '100'),
-  message: {
-    error: {
-      code: 'TOO_MANY_REQUESTS',
-      message: 'Too many requests, please try again later'
-    }
-  }
-});
-app.use('/api/', limiter);
+// Apply global rate limiter
+app.use('/api', globalLimiter);
+
+// Apply IP rate limiter
+app.use('/api', ipLimiter);
+
+// Apply auth rate limiter
+app.use('/api/auth', authLimiter);
+
+// Apply user rate limiter (requires authentication)
+app.use('/api', userLimiter);
+
+// Apply task-specific rate limiters
+app.post('/api/tasks', taskCreateLimiter);
+app.put('/api/tasks/:id', taskUpdateLimiter);
+app.delete('/api/tasks/:id', taskDeleteLimiter);
+
+// CSRF Token endpoint
+app.get('/api/csrf-token', getCsrfTokenMiddleware);
+
+// CSRF protection for state-changing requests
+app.use('/api', csrfMiddleware);
 
 // Connect to Redis
 cacheService.connect().catch((err: any) => {
@@ -54,6 +93,7 @@ cacheService.connect().catch((err: any) => {
 // Routes
 app.use('/api', taskRoutes);
 app.use('/api', authRoutes);
+app.use('/api', auditLogRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {

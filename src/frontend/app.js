@@ -1106,3 +1106,92 @@ function addEllipsis() {
     ellipsis.textContent = '...';
     paginationPages.appendChild(ellipsis);
 }
+
+// Authentication
+function checkAuth() {
+    if (!authService.isAuthenticated()) {
+        window.location.href = 'login.html';
+        return false;
+    }
+    return true;
+}
+
+function addAuthHeader(headers = {}) {
+    const token = authService.getToken();
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
+function logout() {
+    authService.logout().then(() => {
+        window.location.href = 'login.html';
+    });
+}
+
+function updateUserInfo() {
+    const user = authService.getUser();
+    if (user) {
+        const userInfoElement = document.getElementById('user-info');
+        if (userInfoElement) {
+            userInfoElement.textContent = user.name;
+        }
+    }
+}
+
+// Initialize authentication
+function initAuth() {
+    if (!checkAuth()) {
+        return;
+    }
+    updateUserInfo();
+}
+
+// Add logout button to header
+function addLogoutButton() {
+    const headerActions = document.querySelector('.header-actions');
+    if (headerActions) {
+        const logoutBtn = document.createElement('button');
+        logoutBtn.className = 'btn btn-secondary';
+        logoutBtn.textContent = 'Logout';
+        logoutBtn.addEventListener('click', logout);
+        headerActions.appendChild(logoutBtn);
+    }
+}
+
+// Update API calls to include authentication
+const originalFetch = window.fetch;
+window.fetch = function(url, options = {}) {
+    options.headers = options.headers || {};
+    addAuthHeader(options.headers);
+
+    // Add CSRF token to state-changing requests
+    if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+        const csrfToken = csrfService.getToken();
+        if (csrfToken) {
+            options.headers['X-CSRF-Token'] = csrfToken;
+        }
+    }
+
+    return originalFetch(url, options);
+};
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    initAuth();
+    addLogoutButton();
+
+    // Initialize CSRF token
+    csrfService.initialize().catch(error => {
+        console.error('Failed to initialize CSRF token:', error);
+    });
+
+    // Logout button event
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
+
+    // ... rest of initialization
+});

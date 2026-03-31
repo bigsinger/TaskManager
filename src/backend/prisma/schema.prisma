@@ -10,6 +10,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  action      String
+  resource    String
+  resourceId  String?
+  details     String?
+  ipAddress   String?
+  userAgent   String?
+  status      String   @default("success")
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -20,11 +56,16 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  sessions         Session[]
+  auditLogs        AuditLog[]
   createdTasks     Task[] @relation("CreatedBy")
   updatedTasks     Task[] @relation("UpdatedBy")
   assignedTasks    Task[] @relation("AssignedTo")
   completedTasks   Task[] @relation("CompletedBy")
 
+  @@index([role])
+  @@index([isActive])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -49,5 +90,11 @@ model Task {
   completedById String?
   completedBy  User?  @relation("CompletedBy", fields: [completedById], references: [id])
 
+  @@index([createdById])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([createdById, status])
   @@map("tasks")
 }

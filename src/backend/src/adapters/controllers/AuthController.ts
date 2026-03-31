@@ -1,119 +1,141 @@
 /**
- * Auth Controller
+ * 认证控制器
  */
-import { Request, Response, NextFunction } from 'express';
-import { JwtAuthenticationService } from '../../infrastructure/security/JwtAuthenticationService';
-import { z } from 'zod';
 
-export class AuthController {
-  private authService: any;
+import { Request, Response } from 'express';
+import { registerUseCase, RegisterInput } from '../../application/useCases/auth/register';
+import { loginUseCase, LoginInput } from '../../application/useCases/auth/login';
+import { logoutUseCase, LogoutInput } from '../../application/useCases/auth/logout';
+import { getCurrentUserUseCase, GetCurrentUserInput } from '../../application/useCases/auth/getCurrentUser';
 
-  constructor() {
-    this.authService = JwtAuthenticationService;
+/**
+ * 获取客户端 IP 地址
+ */
+const getClientIp = (req: Request): string => {
+  return req.ip || req.connection.remoteAddress || 'unknown';
+};
+
+/**
+ * 获取 User Agent
+ */
+const getUserAgent = (req: Request): string => {
+  return req.headers['user-agent'] || 'unknown';
+};
+
+/**
+ * 注册控制器
+ */
+export const registerController = async (req: Request, res: Response) => {
+  try {
+    const input: RegisterInput = {
+      ...req.body,
+      ipAddress: getClientIp(req),
+      userAgent: getUserAgent(req)
+    };
+
+    const result = await registerUseCase(input);
+
+    res.status(201).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Registration failed'
+    });
   }
+};
 
-  // Register
-  async register(req: Request, res: Response, next: NextFunction): Promise<any> {
-    try {
-      const schema = z.object({
-        email: z.string().email('Invalid email format'),
-        password: z.string().min(8, 'Password must be at least 8 characters'),
-        name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters')
+/**
+ * 登录控制器
+ */
+export const loginController = async (req: Request, res: Response) => {
+  try {
+    const input: LoginInput = {
+      ...req.body,
+      ipAddress: getClientIp(req),
+      userAgent: getUserAgent(req)
+    };
+
+    const result = await loginUseCase(input);
+
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Login failed'
+    });
+  }
+};
+
+/**
+ * 登出控制器
+ */
+export const logoutController = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated'
       });
-
-      const result = schema.parse(req.body);
-
-      const { user, token } = await this.authService.register(
-        result.email,
-        result.password,
-        result.name
-      );
-
-      // Return user without password
-      const { password: _, ...userWithoutPassword } = user;
-
-      return res.status(201).json({
-        user: userWithoutPassword,
-        token
-      });
-    } catch (error) {
-      next(error);
     }
+
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.substring(7) || '';
+
+    const input: LogoutInput = {
+      userId: req.user.userId,
+      token,
+      ipAddress: getClientIp(req),
+      userAgent: getUserAgent(req)
+    };
+
+    await logoutUseCase(input);
+
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Logout failed'
+    });
   }
+};
 
-  // Login
-  async login(req: Request, res: Response, next: NextFunction): Promise<any> {
-    try {
-      const schema = z.object({
-        email: z.string().email('Invalid email format'),
-        password: z.string().min(1, 'Password is required')
+/**
+ * 获取当前用户控制器
+ */
+export const getCurrentUserController = async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authenticated'
       });
-
-      const result = schema.parse(req.body);
-
-      const { user, token } = await this.authService.login(
-        result.email,
-        result.password
-      );
-
-      // Return user without password
-      const { password: _, ...userWithoutPassword } = user;
-
-      return res.json({
-        user: userWithoutPassword,
-        token
-      });
-    } catch (error) {
-      next(error);
     }
-  }
 
-  // Get current user
-  async getCurrentUser(req: Request, res: Response, next: NextFunction): Promise<any> {
-    try {
-      const token = req.headers.authorization?.replace('Bearer ', '');
+    const input: GetCurrentUserInput = {
+      userId: req.user.userId
+    };
 
-      if (!token) {
-        return res.status(401).json({
-          error: {
-            code: 'NO_TOKEN',
-            message: 'No token provided'
-          }
-        });
+    const result = await getCurrentUserUseCase(input);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user: result
       }
-
-      const user = await this.authService.getCurrentUser(token);
-
-      // Return user without password
-      const { password: _, ...userWithoutPassword } = user;
-
-      return res.json(userWithoutPassword);
-    } catch (error) {
-      next(error);
-    }
+    });
+  } catch (error) {
+    res.status(404).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to get user'
+    });
   }
-
-  // Logout
-  async logout(req: Request, res: Response, next: NextFunction): Promise<any> {
-    try {
-      const token = req.headers.authorization?.replace('Bearer ', '');
-
-      if (!token) {
-        return res.status(401).json({
-          error: {
-            code: 'NO_TOKEN',
-            message: 'No token provided'
-          }
-        });
-      }
-
-      await this.authService.logout(token);
-
-      return res.json({ message: 'Logged out successfully' });
-    } catch (error) {
-      next(error);
-    }
-  }
-}
-
-export default AuthController;
+};
