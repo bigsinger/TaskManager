@@ -1264,6 +1264,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Undo/Redo buttons event
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    
+    if (undoBtn) {
+        undoBtn.addEventListener('click', () => {
+            if (window.commandManager) {
+                window.commandManager.undo();
+            }
+        });
+    }
+    
+    if (redoBtn) {
+        redoBtn.addEventListener('click', () => {
+            if (window.commandManager) {
+                window.commandManager.redo();
+            }
+        });
+    }
+    
+    // 加载CommandManager
+    import('./modules/commandManager.js')
+        .then(() => {
+            console.log('Command Manager loaded');
+        })
+        .catch(error => {
+            console.error('Failed to load command manager:', error);
+        });
+
     // Initialize performance optimizations
     initPerformanceOptimizations();
 });
