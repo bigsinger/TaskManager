@@ -1197,21 +1197,25 @@ function updateUserInfo() {
 
 // Initialize authentication
 function initAuth() {
-    if (!checkAuth()) {
-        return;
-    }
+    // 加载本地存储的认证信息
+    authService.loadToken();
+    
+    // 更新用户信息（如果已登录）
     updateUserInfo();
+    
+    // 可选：如果需要强制登录，取消下面注释
+    // if (!checkAuth()) {
+    //     return;
+    // }
 }
 
-// Add logout button to header
+// Add logout button to header (only if not already present)
 function addLogoutButton() {
-    const headerActions = document.querySelector('.header-actions');
-    if (headerActions) {
-        const logoutBtn = document.createElement('button');
-        logoutBtn.className = 'btn btn-secondary';
-        logoutBtn.textContent = 'Logout';
+    // Logout button is already in HTML, no need to add dynamically
+    // Just ensure the event listener is attached
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
         logoutBtn.addEventListener('click', logout);
-        headerActions.appendChild(logoutBtn);
     }
 }
 
@@ -1237,10 +1241,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initAuth();
     addLogoutButton();
 
-    // Initialize CSRF token
-    csrfService.initialize().catch(error => {
-        console.error('Failed to initialize CSRF token:', error);
-    });
+    // Initialize CSRF token (optional, non-blocking)
+    if (csrfService && typeof csrfService.initialize === 'function') {
+        csrfService.initialize().catch(error => {
+            console.warn('CSRF initialization skipped:', error.message);
+        });
+    }
 
     // Logout button event
     const logoutBtn = document.getElementById('logout-btn');
