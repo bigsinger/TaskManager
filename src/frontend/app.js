@@ -1292,6 +1292,24 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(error => {
             console.error('Failed to load command manager:', error);
         });
+    
+    // 加载增强功能模块（快捷键、批量操作）
+    import('./modules/enhancements.js')
+        .then(() => {
+            console.log('Enhancements loaded');
+        })
+        .catch(error => {
+            console.error('Failed to load enhancements:', error);
+        });
+    
+    // 加载统计模块
+    import('./modules/statistics.js')
+        .then(() => {
+            console.log('Statistics module loaded');
+        })
+        .catch(error => {
+            console.error('Failed to load statistics:', error);
+        });
 
     // Initialize performance optimizations
     initPerformanceOptimizations();
