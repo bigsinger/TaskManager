@@ -2,7 +2,7 @@
  * Password utility module
  * 密码加密和验证工具
  */
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcrypt';
 
 const SALT_ROUNDS = 10;
 
@@ -21,6 +21,16 @@ export async function comparePassword(password: string, hash: string): Promise<b
 }
 
 /**
+ * Validate password strength
+ */
+export function validatePasswordStrength(password: string): { valid: boolean; message?: string } {
+  if (password.length < 6) {
+    return { valid: false, message: '密码至少需要6个字符' };
+  }
+  return { valid: true };
+}
+
+/**
  * Generate random password
  */
 export function generateRandomPassword(length: number = 12): string {
@@ -35,5 +45,6 @@ export function generateRandomPassword(length: number = 12): string {
 export default {
   hashPassword,
   comparePassword,
+  validatePasswordStrength,
   generateRandomPassword,
 };
