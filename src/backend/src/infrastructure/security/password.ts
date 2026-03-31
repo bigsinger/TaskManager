@@ -1,54 +1,39 @@
 /**
- * 密码加密工具类
+ * Password utility module
+ * 密码加密和验证工具
  */
-
 import bcrypt from 'bcrypt';
 
 const SALT_ROUNDS = 10;
 
 /**
- * 加密密码
+ * Hash password
  */
-export const hashPassword = async (password: string): Promise<string> => {
-  const salt = await bcrypt.genSalt(SALT_ROUNDS);
-  return bcrypt.hash(password, salt);
-};
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, SALT_ROUNDS);
+}
 
 /**
- * 验证密码
+ * Compare password with hash
  */
-export const comparePassword = async (password: string, hash: string): Promise<boolean> => {
+export async function comparePassword(password: string, hash: string): Promise<boolean> {
   return bcrypt.compare(password, hash);
-};
+}
 
 /**
- * 验证密码强度
+ * Generate random password
  */
-export const validatePasswordStrength = (password: string): { valid: boolean; errors: string[] } => {
-  const errors: string[] = [];
-
-  if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
+export function generateRandomPassword(length: number = 12): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+  return password;
+}
 
-  if (!/[A-Z]/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter');
-  }
-
-  if (!/[a-z]/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter');
-  }
-
-  if (!/[0-9]/.test(password)) {
-    errors.push('Password must contain at least one number');
-  }
-
-  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-    errors.push('Password must contain at least one special character');
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors
-  };
+export default {
+  hashPassword,
+  comparePassword,
+  generateRandomPassword,
 };
