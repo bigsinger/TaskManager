@@ -47,6 +47,9 @@ export class TaskController {
         status: req.query['status'] as string,
         priority: req.query['priority'] as string,
         tags: req.query['tags'] as string ? (req.query['tags'] as string).split(',') : undefined,
+        search: req.query['search'] as string,
+        sortBy: req.query['sortBy'] as string,
+        sortOrder: req.query['sortOrder'] as 'asc' | 'desc',
         page: req.query['page'] ? parseInt(req.query['page'] as string) : undefined,
         limit: req.query['limit'] ? parseInt(req.query['limit'] as string) : undefined
       };

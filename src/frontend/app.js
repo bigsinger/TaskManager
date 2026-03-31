@@ -79,7 +79,18 @@ const translations = {
         addTag: 'Add tag',
         removeTag: 'Remove tag',
         taskCreatedHidden: 'Task created but not visible under current filters',
-        taskDeleted: 'Task deleted successfully'
+        taskDeleted: 'Task deleted successfully',
+        // 搜索和排序
+        searchPlaceholder: 'Search tasks...',
+        sortByCreatedDesc: 'Newest First',
+        sortByCreatedAsc: 'Oldest First',
+        sortByTitleAsc: 'Title A-Z',
+        sortByTitleDesc: 'Title Z-A',
+        sortByStatus: 'By Status',
+        sortByPriority: 'By Priority',
+        sortByDueDate: 'By Due Date',
+        noSearchResults: 'No tasks found',
+        noSearchResultsHint: 'Try different keywords'
     },
     zh: {
         title: '任务管理器',
@@ -130,7 +141,18 @@ const translations = {
         addTag: '添加标签',
         removeTag: '移除标签',
         taskCreatedHidden: '任务已创建，但在当前筛选条件下不可见',
-        taskDeleted: '任务删除成功'
+        taskDeleted: '任务删除成功',
+        // 搜索和排序
+        searchPlaceholder: '搜索任务...',
+        sortByCreatedDesc: '最新创建',
+        sortByCreatedAsc: '最早创建',
+        sortByTitleAsc: '标题 A-Z',
+        sortByTitleDesc: '标题 Z-A',
+        sortByStatus: '按状态',
+        sortByPriority: '按优先级',
+        sortByDueDate: '按截止日期',
+        noSearchResults: '未找到任务',
+        noSearchResultsHint: '尝试不同的关键词'
     }
 };
 
@@ -444,12 +466,39 @@ function t(key) {
     return translations[currentLanguage][key] || key;
 }
 
+// 搜索和排序状态
+let searchQuery = '';
+let sortBy = 'createdAt';
+let sortOrder = 'desc';
+
 // Load all tasks from API
 async function loadTasks() {
     taskList.innerHTML = `<p class="loading">${t('loading')}</p>`;
     
     try {
-        const response = await fetch(API_URL);
+        // 构建查询参数
+        const params = new URLSearchParams();
+        
+        // 添加搜索参数
+        if (searchQuery) {
+            params.append('search', searchQuery);
+        }
+        
+        // 添加排序参数
+        params.append('sortBy', sortBy);
+        params.append('sortOrder', sortOrder);
+        
+        // 添加分页参数
+        params.append('page', currentPage.toString());
+        params.append('limit', pageSize.toString());
+        
+        // 添加状态筛选
+        if (selectedFilters.size > 0) {
+            params.append('status', Array.from(selectedFilters).join(','));
+        }
+        
+        const url = `${API_URL}?${params.toString()}`;
+        const response = await fetch(url);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -458,25 +507,31 @@ async function loadTasks() {
         const data = await response.json();
         // Backend returns { tasks: [], total: 0, page: 1, limit: 20, totalPages: 0 }
         allTasks = data.tasks || [];
-        totalTasks = allTasks.length;
+        totalTasks = data.total || 0;
+        totalPages = data.totalPages || 1;
         
-        // Filter tasks
-        const filteredTasks = filterTasks(allTasks);
-        
-        // Calculate pagination
-        totalPages = Math.ceil(filteredTasks.length / pageSize);
-        if (currentPage > totalPages && totalPages > 0) {
-            currentPage = totalPages;
+        // 客户端标签筛选（因为SQLite不支持数组操作）
+        let filteredTasks = allTasks;
+        if (selectedTags.size > 0) {
+            filteredTasks = filteredTasks.filter(task => {
+                let tagsArray = [];
+                if (task.tags) {
+                    try {
+                        tagsArray = typeof task.tags === 'string' ? JSON.parse(task.tags) : task.tags;
+                    } catch (e) {
+                        tagsArray = [];
+                    }
+                }
+                return tagsArray.some(tag => selectedTags.has(tag));
+            });
         }
         
-        // Get paginated tasks
-        const startIndex = (currentPage - 1) * pageSize;
-        const endIndex = startIndex + pageSize;
-        const paginatedTasks = filteredTasks.slice(startIndex, endIndex);
-        
-        renderTasks(paginatedTasks);
-        updatePagination(filteredTasks.length, startIndex + 1, Math.min(endIndex, filteredTasks.length));
+        renderTasks(filteredTasks);
+        updatePagination(totalTasks, (currentPage - 1) * pageSize + 1, Math.min(currentPage * pageSize, totalTasks));
         renderTagCloud();
+        
+        // 显示搜索结果提示
+        updateSearchResultsInfo();
     } catch (error) {
         console.error('Error loading tasks:', error);
         taskList.innerHTML = `<p class="error">${t('loadError')}</p>`;
@@ -1193,5 +1248,384 @@ document.addEventListener('DOMContentLoaded', () => {
         logoutBtn.addEventListener('click', logout);
     }
 
-    // ... rest of initialization
+    // Export button event
+    const exportBtn = document.getElementById('export-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            // 动态加载导出模块
+            import('./modules/export.js')
+                .then(() => {
+                    showExportDialog();
+                })
+                .catch(error => {
+                    console.error('Failed to load export module:', error);
+                    showToast('Failed to load export module', 'error');
+                });
+        });
+    }
+
+    // Initialize performance optimizations
+    initPerformanceOptimizations();
 });
+
+// ============================================
+// 性能优化 - Performance Optimizations
+// ============================================
+
+/**
+ * 初始化性能优化
+ */
+function initPerformanceOptimizations() {
+    // 1. 初始化懒加载
+    initLazyLoading();
+    
+    // 2. 初始化虚拟滚动（如果任务数量多）
+    initVirtualScroll();
+    
+    // 3. 初始化防抖和节流
+    initDebounceThrottle();
+    
+    // 4. 初始化性能监控
+    initPerformanceMonitoring();
+}
+
+/**
+ * 懒加载初始化
+ */
+function initLazyLoading() {
+    // 使用 Intersection Observer 实现懒加载
+    if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        img.classList.add('loaded');
+                    }
+                    imageObserver.unobserve(img);
+                }
+            });
+        }, {
+            rootMargin: '50px 0px',
+            threshold: 0.01
+        });
+
+        // 观察所有需要懒加载的图片
+        document.querySelectorAll('img[data-src]').forEach(img => {
+            imageObserver.observe(img);
+        });
+    }
+}
+
+/**
+ * 虚拟滚动初始化 - 用于大量任务列表
+ */
+function initVirtualScroll() {
+    // 当任务数量超过100时启用虚拟滚动
+    const VIRTUAL_SCROLL_THRESHOLD = 100;
+    
+    window.enableVirtualScroll = function(taskCount) {
+        if (taskCount > VIRTUAL_SCROLL_THRESHOLD) {
+            document.body.classList.add('virtual-scroll-enabled');
+            console.log(`Virtual scroll enabled for ${taskCount} tasks`);
+        }
+    };
+}
+
+/**
+ * 防抖和节流初始化
+ */
+function initDebounceThrottle() {
+    // 防抖函数
+    window.debounce = function(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    };
+
+    // 节流函数
+    window.throttle = function(func, limit) {
+        let inThrottle;
+        return function(...args) {
+            if (!inThrottle) {
+                func.apply(this, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    };
+
+    // 应用防抖到搜索输入
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce((e) => {
+            performSearch(e.target.value);
+        }, 300));
+    }
+
+    // 应用节流到滚动事件
+    window.addEventListener('scroll', throttle(() => {
+        // 处理滚动相关逻辑
+    }, 100));
+}
+
+/**
+ * 性能监控初始化
+ */
+function initPerformanceMonitoring() {
+    // 监控关键性能指标
+    if ('PerformanceObserver' in window) {
+        // 监控 LCP (Largest Contentful Paint)
+        const lcpObserver = new PerformanceObserver((list) => {
+            const entries = list.getEntries();
+            const lastEntry = entries[entries.length - 1];
+            console.log(`LCP: ${lastEntry.startTime.toFixed(2)}ms`);
+            
+            // 如果 LCP > 2.5s，记录性能问题
+            if (lastEntry.startTime > 2500) {
+                console.warn('Performance: LCP exceeds 2.5s threshold');
+            }
+        });
+        
+        try {
+            lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
+        } catch (e) {
+            // 浏览器不支持此类型
+        }
+
+        // 监控 FID (First Input Delay)
+        const fidObserver = new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+                const delay = entry.processingStart - entry.startTime;
+                console.log(`FID: ${delay.toFixed(2)}ms`);
+                
+                if (delay > 100) {
+                    console.warn('Performance: FID exceeds 100ms threshold');
+                }
+            }
+        });
+        
+        try {
+            fidObserver.observe({ entryTypes: ['first-input'] });
+        } catch (e) {
+            // 浏览器不支持此类型
+        }
+
+        // 监控 CLS (Cumulative Layout Shift)
+        let clsValue = 0;
+        const clsObserver = new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+                if (!entry.hadRecentInput) {
+                    clsValue += entry.value;
+                }
+            }
+            console.log(`CLS: ${clsValue.toFixed(4)}`);
+            
+            if (clsValue > 0.1) {
+                console.warn('Performance: CLS exceeds 0.1 threshold');
+            }
+        });
+        
+        try {
+            clsObserver.observe({ entryTypes: ['layout-shift'] });
+        } catch (e) {
+            // 浏览器不支持此类型
+        }
+    }
+
+    // 记录页面加载时间
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const perfData = performance.getEntriesByType('navigation')[0];
+            if (perfData) {
+                console.log('Performance Metrics:');
+                console.log(`  DNS: ${perfData.domainLookupEnd - perfData.domainLookupStart}ms`);
+                console.log(`  TCP: ${perfData.connectEnd - perfData.connectStart}ms`);
+                console.log(`  TTFB: ${perfData.responseStart - perfData.requestStart}ms`);
+                console.log(`  DOM Ready: ${perfData.domContentLoadedEventEnd - perfData.startTime}ms`);
+                console.log(`  Load: ${perfData.loadEventEnd - perfData.startTime}ms`);
+            }
+        }, 0);
+    });
+}
+
+/**
+ * 资源预加载
+ * @param {string} url - 资源URL
+ * @param {string} as - 资源类型 (script, style, image, etc.)
+ */
+function preloadResource(url, as = 'script') {
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.href = url;
+    link.as = as;
+    
+    if (as === 'script') {
+        link.setAttribute('crossorigin', 'anonymous');
+    }
+    
+    document.head.appendChild(link);
+}
+
+/**
+ * 动态导入模块（代码分割）
+ * @param {string} moduleName - 模块名称
+ */
+async function loadModule(moduleName) {
+    try {
+        switch (moduleName) {
+            case 'chart':
+                const chartModule = await import('./modules/chart.js');
+                return chartModule;
+            case 'export':
+                const exportModule = await import('./modules/export.js');
+                return exportModule;
+            case 'search':
+                const searchModule = await import('./modules/search.js');
+                return searchModule;
+            default:
+                throw new Error(`Unknown module: ${moduleName}`);
+        }
+    } catch (error) {
+        console.error(`Failed to load module ${moduleName}:`, error);
+        throw error;
+    }
+}
+
+// 预加载关键模块
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        // 预加载可能需要的模块
+        preloadResource('./modules/search.js', 'script');
+        
+        // 初始化搜索和排序
+        initSearchAndSort();
+    });
+} else {
+    preloadResource('./modules/search.js', 'script');
+    initSearchAndSort();
+}
+
+// ============================================
+// 搜索和排序功能 - Search & Sort Functionality
+// ============================================
+
+/**
+ * 初始化搜索和排序
+ */
+function initSearchAndSort() {
+    // 搜索输入框
+    const searchInput = document.getElementById('search-input');
+    const searchClear = document.getElementById('search-clear');
+    
+    if (searchInput) {
+        // 使用防抖优化搜索
+        const debouncedSearch = debounce((value) => {
+            searchQuery = value.trim();
+            currentPage = 1; // 重置到第一页
+            loadTasks();
+        }, 300);
+        
+        searchInput.addEventListener('input', (e) => {
+            const value = e.target.value;
+            
+            // 显示/隐藏清除按钮
+            if (searchClear) {
+                searchClear.style.display = value ? 'flex' : 'none';
+            }
+            
+            debouncedSearch(value);
+        });
+        
+        // 清除搜索
+        if (searchClear) {
+            searchClear.addEventListener('click', () => {
+                searchInput.value = '';
+                searchClear.style.display = 'none';
+                searchQuery = '';
+                currentPage = 1;
+                loadTasks();
+                searchInput.focus();
+            });
+        }
+        
+        // 回车搜索
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchQuery = e.target.value.trim();
+                currentPage = 1;
+                loadTasks();
+            }
+        });
+    }
+    
+    // 排序选择器
+    const sortSelect = document.getElementById('sort-select');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', (e) => {
+            const [field, order] = e.target.value.split(':');
+            sortBy = field;
+            sortOrder = order || 'desc';
+            currentPage = 1;
+            loadTasks();
+        });
+    }
+}
+
+/**
+ * 执行搜索
+ * @param {string} query - 搜索关键词
+ */
+function performSearch(query) {
+    searchQuery = query.trim();
+    currentPage = 1;
+    loadTasks();
+}
+
+/**
+ * 更新搜索结果信息
+ */
+function updateSearchResultsInfo() {
+    const searchInput = document.getElementById('search-input');
+    
+    // 如果有搜索词，显示搜索结果统计
+    if (searchQuery && totalTasks === 0) {
+        taskList.innerHTML = `
+            <div class="no-search-results">
+                <div class="no-search-results-icon">🔍</div>
+                <div class="no-search-results-text">${t('noSearchResults')}</div>
+                <div class="no-search-results-hint">${t('noSearchResultsHint')}</div>
+            </div>
+        `;
+    }
+}
+
+/**
+ * 高亮搜索结果
+ * @param {string} text - 原始文本
+ * @param {string} query - 搜索关键词
+ * @returns {string} - 高亮后的HTML
+ */
+function highlightSearchResult(text, query) {
+    if (!query || !text) return text;
+    
+    const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+    return text.replace(regex, '<span class="search-highlight">$1</span>');
+}
+
+/**
+ * 转义正则表达式特殊字符
+ * @param {string} string - 输入字符串
+ * @returns {string} - 转义后的字符串
+ */
+function escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}

@@ -876,3 +876,144 @@ header h1 {
 #logout-btn {
     margin-left: 10px;
 }
+
+/* ============================================
+   搜索和排序样式 - Search & Sort Styles
+   ============================================ */
+
+/* 搜索框 */
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-right: 10px;
+}
+
+#search-input {
+    padding: 10px 35px 10px 15px;
+    border: 2px solid var(--form-border-color);
+    border-radius: 25px;
+    background: var(--container-bg);
+    color: var(--text-color);
+    font-size: 14px;
+    width: 200px;
+    transition: all 0.3s ease;
+}
+
+#search-input:focus {
+    outline: none;
+    border-color: var(--btn-primary-bg);
+    width: 250px;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#search-input::placeholder {
+    color: var(--task-meta-color);
+}
+
+.search-clear {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--task-meta-color);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.search-clear:hover {
+    background: var(--task-bg);
+    color: var(--text-color);
+}
+
+/* 排序控件 */
+.sort-controls {
+    margin-right: 10px;
+}
+
+.sort-select {
+    padding: 10px 15px;
+    border: 2px solid var(--form-border-color);
+    border-radius: 8px;
+    background: var(--container-bg);
+    color: var(--text-color);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.sort-select:focus {
+    outline: none;
+    border-color: var(--btn-primary-bg);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.sort-select option {
+    background: var(--container-bg);
+    color: var(--text-color);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .search-box {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    #search-input {
+        width: 100%;
+    }
+    
+    #search-input:focus {
+        width: 100%;
+    }
+    
+    .sort-controls {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+    
+    .sort-select {
+        width: 100%;
+    }
+}
+
+/* 搜索结果高亮 */
+.search-highlight {
+    background: yellow;
+    color: black;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+/* 无搜索结果提示 */
+.no-search-results {
+    text-align: center;
+    padding: 40px;
+    color: var(--empty-state-color);
+}
+
+.no-search-results-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+.no-search-results-text {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.no-search-results-hint {
+    font-size: 14px;
+    opacity: 0.7;
+}

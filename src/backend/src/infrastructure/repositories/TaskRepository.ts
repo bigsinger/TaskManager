@@ -14,6 +14,9 @@ class TaskRepository implements ITaskRepository {
     status?: TaskStatus;
     priority?: TaskPriority;
     tags?: string[];
+    search?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
     page?: number;
     limit?: number;
   }): Promise<{ tasks: Task[]; total: number; page: number; limit: number; totalPages: number; }> {
@@ -30,11 +33,27 @@ class TaskRepository implements ITaskRepository {
       where.priority = filters.priority;
     }
 
+    // 搜索功能 - 支持标题和描述的全文搜索
+    if (filters?.search) {
+      where.OR = [
+        { title: { contains: filters.search, mode: 'insensitive' } },
+        { description: { contains: filters.search, mode: 'insensitive' } }
+      ];
+    }
+
+    // 构建排序条件
+    const orderBy: any = {};
+    if (filters?.sortBy) {
+      orderBy[filters.sortBy] = filters.sortOrder || 'desc';
+    } else {
+      orderBy.createdAt = 'desc';
+    }
+
     // Note: SQLite doesn't support array operations, so we filter tags in memory
     const [tasks, total] = await Promise.all([
       prisma.task.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         skip: (page - 1) * limit,
         take: limit,
         include: {

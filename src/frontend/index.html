@@ -3,8 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRUD Task Manager</title>
+    
+    <!-- 性能优化 Meta -->
+    <meta name="description" content="TaskManager - 企业级任务管理系统">
+    <meta name="theme-color" content="#4a90d9">
+    
+    <!-- Preconnect - 预连接关键域名 -->
+    <link rel="preconnect" href="http://localhost:3000">
+    <link rel="dns-prefetch" href="http://localhost:3000">
+    
+    <!-- Preload 关键资源 -->
+    <link rel="preload" href="style.css" as="style">
+    <link rel="preload" href="app.js" as="script">
+    
+    <title>TaskManager - 企业级任务管理系统</title>
     <link rel="stylesheet" href="style.css">
+    
+    <!-- 注册 Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('SW registered'))
+                    .catch(error => console.log('SW registration failed'));
+            });
+        }
+    </script>
 </head>
 <body>
     <div class="container">
@@ -17,11 +41,32 @@
                 <div class="user-info" id="user-info">
                     <span class="user-name"></span>
                 </div>
+                
+                <!-- 搜索框 -->
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="🔍 搜索任务..." data-i18n-placeholder="searchPlaceholder">
+                    <button id="search-clear" class="search-clear" style="display: none;">✕</button>
+                </div>
+                
+                <!-- 排序控件 -->
+                <div class="sort-controls">
+                    <select id="sort-select" class="sort-select">
+                        <option value="createdAt:desc" data-i18n="sortByCreatedDesc">最新创建</option>
+                        <option value="createdAt:asc" data-i18n="sortByCreatedAsc">最早创建</option>
+                        <option value="title:asc" data-i18n="sortByTitleAsc">标题 A-Z</option>
+                        <option value="title:desc" data-i18n="sortByTitleDesc">标题 Z-A</option>
+                        <option value="status:asc" data-i18n="sortByStatus">按状态</option>
+                        <option value="priority:desc" data-i18n="sortByPriority">按优先级</option>
+                        <option value="dueDate:asc" data-i18n="sortByDueDate">按截止日期</option>
+                    </select>
+                </div>
+                
                 <div class="filter-buttons">
                     <button class="filter-btn" data-status="pending" data-i18n="pending">Pending</button>
                     <button class="filter-btn" data-status="in-progress" data-i18n="inProgress">In Progress</button>
                     <button class="filter-btn" data-status="completed" data-i18n="completed">Completed</button>
                 </div>
+                <button id="export-btn" class="btn btn-secondary" title="Export Tasks">📥</button>
                 <button id="settings-btn" class="btn btn-secondary">⚙️</button>
                 <button id="logout-btn" class="btn btn-secondary">Logout</button>
                 <button id="show-form-btn" class="btn btn-primary" data-i18n="newTask">+ New Task</button>

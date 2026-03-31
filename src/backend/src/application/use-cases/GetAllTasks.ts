@@ -13,6 +13,9 @@ export class GetAllTasks {
     status?: TaskStatus;
     priority?: TaskPriority;
     tags?: string[];
+    search?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
     page?: number;
     limit?: number;
   }): Promise<{ tasks: TaskResponseDto[]; total: number; page: number; limit: number; totalPages: number; }> {
@@ -28,6 +31,17 @@ export class GetAllTasks {
 
     if (filters?.tags !== undefined) {
       repositoryFilters.tags = filters.tags;
+    }
+
+    // 搜索功能
+    if (filters?.search) {
+      repositoryFilters.search = filters.search;
+    }
+
+    // 排序功能
+    if (filters?.sortBy) {
+      repositoryFilters.sortBy = filters.sortBy;
+      repositoryFilters.sortOrder = filters.sortOrder || 'desc';
     }
 
     if (filters?.page !== undefined) {
