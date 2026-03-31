@@ -3,9 +3,26 @@
   "version": "1.0.0",
   "description": "Simple CRUD Frontend",
   "scripts": {
-    "start": "http-server -p 3001 -c-1 --cors"
+    "start": "http-server -p 3001 -c-1 --cors",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "http-server": "^14.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "modules/**/*.js",
+      "!node_modules/**"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
   }
 }
