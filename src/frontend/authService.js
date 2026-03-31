@@ -3,13 +3,15 @@
  */
 
 class AuthService {
-  private token: string | null = null;
-  private user: any = null;
+  constructor() {
+    this.token = null;
+    this.user = null;
+  }
 
   /**
    * 注册
    */
-  async register(email: string, password: string, name: string) {
+  async register(email, password, name) {
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -24,23 +26,21 @@ class AuthService {
       if (data.success) {
         this.token = data.data.token;
         this.user = data.data.user;
-        localStorage.setItem('token', this.token);
-        localStorage.setItem('user', JSON.stringify(this.user));
+        this.saveToken();
+        return { success: true, data: data.data };
+      } else {
+        return { success: false, error: data.error };
       }
-
-      return data;
     } catch (error) {
-      return {
-        success: false,
-        message: 'Registration failed'
-      };
+      console.error('注册失败:', error);
+      return { success: false, error: '注册失败，请稍后重试' };
     }
   }
 
   /**
    * 登录
    */
-  async login(email: string, password: string) {
+  async login(email, password) {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -55,118 +55,100 @@ class AuthService {
       if (data.success) {
         this.token = data.data.token;
         this.user = data.data.user;
-        localStorage.setItem('token', this.token);
-        localStorage.setItem('user', JSON.stringify(this.user));
+        this.saveToken();
+        return { success: true, data: data.data };
+      } else {
+        return { success: false, error: data.error };
       }
-
-      return data;
     } catch (error) {
-      return {
-        success: false,
-        message: 'Login failed'
-      };
+      console.error('登录失败:', error);
+      return { success: false, error: '登录失败，请稍后重试' };
     }
   }
 
   /**
    * 登出
    */
-  async logout() {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.token}`
-        }
-      });
+  logout() {
+    this.token = null;
+    this.user = null;
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+  }
 
-      this.token = null;
-      this.user = null;
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-
-      return await response.json();
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Logout failed'
-      };
+  /**
+   * 保存Token到本地存储
+   */
+  saveToken() {
+    if (this.token) {
+      localStorage.setItem('auth_token', this.token);
     }
+    if (this.user) {
+      localStorage.setItem('auth_user', JSON.stringify(this.user));
+    }
+  }
+
+  /**
+   * 从本地存储加载Token
+   */
+  loadToken() {
+    const token = localStorage.getItem('auth_token');
+    const userStr = localStorage.getItem('auth_user');
+    
+    if (token) {
+      this.token = token;
+    }
+    if (userStr) {
+      try {
+        this.user = JSON.parse(userStr);
+      } catch (e) {
+        console.error('解析用户信息失败:', e);
+      }
+    }
+  }
+
+  /**
+   * 获取Token
+   */
+  getToken() {
+    return this.token;
   }
 
   /**
    * 获取当前用户
    */
-  async getCurrentUser() {
+  getUser() {
+    return this.user;
+  }
+
+  /**
+   * 检查是否已登录
+   */
+  isLoggedIn() {
+    return !!this.token;
+  }
+
+  /**
+   * 验证Token
+   */
+  async verifyToken() {
+    if (!this.token) {
+      return false;
+    }
+
     try {
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch('/api/auth/verify', {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.token}`
         }
       });
 
       const data = await response.json();
-
-      if (data.success) {
-        this.user = data.data.user;
-        localStorage.setItem('user', JSON.stringify(this.user));
-      }
-
-      return data;
+      return data.success;
     } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to get current user'
-      };
-    }
-  }
-
-  /**
-   * 获取 Token
-   */
-  getToken() {
-    if (!this.token) {
-      this.token = localStorage.getItem('token');
-    }
-    return this.token;
-  }
-
-  /**
-   * 获取用户
-   */
-  getUser() {
-    if (!this.user) {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        this.user = JSON.parse(userStr);
-      }
-    }
-    return this.user;
-  }
-
-  /**
-   * 检查是否已认证
-   */
-  isAuthenticated() {
-    return !!this.getToken();
-  }
-
-  /**
-   * 检查是否是管理员
-   */
-  isAdmin() {
-    const user = this.getUser();
-    return user && user.role === 'ADMIN';
-  }
-
-  /**
-   * 初始化认证状态
-   */
-  initialize() {
-    this.token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      this.user = JSON.parse(userStr);
+      console.error('验证Token失败:', error);
+      return false;
     }
   }
 }
@@ -174,7 +156,7 @@ class AuthService {
 // 创建单例
 const authService = new AuthService();
 
-// 初始化
-authService.initialize();
-
-export default authService;
+// 导出
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { AuthService, authService };
+}
