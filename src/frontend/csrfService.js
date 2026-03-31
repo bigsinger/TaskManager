@@ -57,6 +57,14 @@ class CsrfService {
     if (metaTag) {
       this.csrfToken = metaTag.getAttribute('content');
     }
+    return Promise.resolve();
+  }
+
+  /**
+   * 初始化（别名）
+   */
+  initialize() {
+    return this.init();
   }
 }
 

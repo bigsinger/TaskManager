@@ -129,6 +129,13 @@ class AuthService {
   }
 
   /**
+   * 检查是否已认证（别名）
+   */
+  isAuthenticated() {
+    return this.isLoggedIn();
+  }
+
+  /**
    * 验证Token
    */
   async verifyToken() {
