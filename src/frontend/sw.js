@@ -63,6 +63,14 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
     
+    // OAuth回调页面 - 直接网络请求，不缓存
+    if (url.pathname.includes('oauth-callback.html') || url.search.includes('token=')) {
+        event.respondWith(fetch(request).catch(() => {
+            return new Response('Network error', { status: 503 });
+        }));
+        return;
+    }
+    
     // API请求 - 网络优先，缓存回退
     if (API_ROUTES.some(route => url.pathname.includes(route))) {
         event.respondWith(networkFirst(request));
@@ -118,14 +126,18 @@ async function networkFirst(request) {
     
     try {
         const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
+        // 只缓存GET请求，不缓存POST/PUT/DELETE等
+        if (networkResponse.ok && request.method === 'GET') {
             cache.put(request, networkResponse.clone());
         }
         return networkResponse;
     } catch (error) {
-        const cached = await cache.match(request);
-        if (cached) {
-            return cached;
+        // 只对GET请求使用缓存回退
+        if (request.method === 'GET') {
+            const cached = await cache.match(request);
+            if (cached) {
+                return cached;
+            }
         }
         throw error;
     }

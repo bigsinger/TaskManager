@@ -498,7 +498,8 @@ async function loadTasks() {
         }
         
         const url = `${API_URL}?${params.toString()}`;
-        const response = await fetch(url);
+        const headers = addAuthHeader();
+        const response = await fetch(url, { headers });
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -583,17 +584,45 @@ function renderTasks(tasks) {
         // Convert status to camelCase for translation lookup
         const statusKey = task.status.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
         
-        // Parse tags from JSON string
+        // Parse tags from JSON string or comma-separated string
         let tagsArray = [];
         if (task.tags) {
             try {
-                tagsArray = typeof task.tags === 'string' ? JSON.parse(task.tags) : task.tags;
+                // Debug: log original tags
+                console.log('Original tags:', task.tags, 'Type:', typeof task.tags);
+                
+                // Try JSON parse first
+                let parsed = typeof task.tags === 'string' ? JSON.parse(task.tags) : task.tags;
+                
+                // Debug: log after first parse
+                console.log('After first parse:', parsed, 'Type:', typeof parsed);
+                
+                // If parsed is a string, try parsing again (nested JSON issue)
+                if (typeof parsed === 'string') {
+                    parsed = JSON.parse(parsed);
+                    console.log('After second parse:', parsed, 'Type:', typeof parsed);
+                }
+                
+                // If it's an array, use it
+                if (Array.isArray(parsed)) {
+                    tagsArray = parsed.filter(tag => tag && typeof tag === 'string' && tag.trim() !== '');
+                }
+                // If it's a string, split by comma
+                else if (typeof parsed === 'string') {
+                    tagsArray = parsed.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+                }
             } catch (e) {
-                tagsArray = [];
+                // If all else fails, try comma-separated
+                if (typeof task.tags === 'string') {
+                    tagsArray = task.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+                }
             }
         }
         
-        // Render tags
+        // Debug: log final tags
+        console.log('Final tagsArray:', tagsArray);
+        
+        // Render tags (without brackets)
         const tagsHtml = tagsArray && tagsArray.length > 0 
             ? `<div class="task-tags">${tagsArray.map(tag => `<span class="task-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
             : '';
@@ -621,7 +650,9 @@ function renderTasks(tasks) {
                 ${task.description ? escapeHtml(task.description) : ''}
             </div>
             <div class="task-meta">
-                ${t('created')} ${new Date(task.createdAt + 'Z').toLocaleString()}
+                <span title="创建时间">📅 ${formatDate(task.createdAt)}</span>
+                ${task.updatedAt && task.updatedAt !== task.createdAt ? 
+                    `<span title="最后修改">✏️ ${formatDate(task.updatedAt)}</span>` : ''}
             </div>
         </div>
     `}).join('');
@@ -673,7 +704,7 @@ async function handleFormSubmit(e) {
         title: document.getElementById('task-title').value,
         description: document.getElementById('task-description').value,
         status: document.getElementById('task-status').value,
-        tags: JSON.stringify(currentTags)
+        tags: currentTags
     };
 
     // Validate form
@@ -699,9 +730,13 @@ async function handleFormSubmit(e) {
             // Check if the new task is visible under current filters
             const isTaskVisible = isTaskVisibleUnderFilters(newTask);
             
-            if (!isTaskVisible) {
+            if (isTaskVisible) {
+                // Add to current tasks array and re-render
+                allTasks.unshift(newTask);
+                renderTasks(allTasks);
+            } else {
                 // Show toast notification if task is not visible
-                showToast(t('taskCreatedHidden'), 'warning');
+                showToast(t('taskCreatedHidden') || 'Task created but not visible with current filters', 'warning');
             }
         }
         
@@ -734,11 +769,12 @@ async function handleFormSubmit(e) {
 
 // Create new task
 async function createTask(taskData) {
+    const headers = addAuthHeader({
+        'Content-Type': 'application/json'
+    });
     const response = await fetch(API_URL, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify(taskData)
     });
 
@@ -760,11 +796,12 @@ async function createTask(taskData) {
 
 // Update existing task
 async function updateTask(taskId, taskData) {
+    const headers = addAuthHeader({
+        'Content-Type': 'application/json'
+    });
     const response = await fetch(`${API_URL}/${taskId}`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify(taskData)
     });
 
@@ -850,7 +887,8 @@ function selectTask(taskId) {
 // Load task data into form
 async function loadTaskData(taskId) {
     try {
-        const response = await fetch(`${API_URL}/${taskId}`);
+        const headers = addAuthHeader();
+        const response = await fetch(`${API_URL}/${taskId}`, { headers });
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -979,8 +1017,10 @@ async function deleteTask(taskId) {
     }
 
     try {
+        const headers = addAuthHeader();
         const response = await fetch(`${API_URL}/${taskId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers
         });
 
         if (!response.ok) {
@@ -1032,6 +1072,33 @@ async function deleteTask(taskId) {
         console.error('Error deleting task:', error);
         alert(`${t('deleteError')}\n\n${error.message}`);
     }
+}
+
+// Helper function to format date
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'N/A';
+    
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return '刚刚';
+    if (diffMins < 60) return `${diffMins}分钟前`;
+    if (diffHours < 24) return `${diffHours}小时前`;
+    if (diffDays < 7) return `${diffDays}天前`;
+    
+    return date.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 // Helper function to escape HTML
@@ -1173,6 +1240,7 @@ function checkAuth() {
 
 function addAuthHeader(headers = {}) {
     const token = authService.getToken();
+    console.log('addAuthHeader called, token:', token ? 'exists' : 'missing');
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
@@ -1199,6 +1267,8 @@ function updateUserInfo() {
 function initAuth() {
     // 加载本地存储的认证信息
     authService.loadToken();
+    console.log('initAuth: token loaded:', authService.getToken() ? 'yes' : 'no');
+    console.log('initAuth: user loaded:', authService.getUser());
     
     // 更新用户信息（如果已登录）
     updateUserInfo();
@@ -1681,4 +1751,43 @@ function highlightSearchResult(text, query) {
  */
 function escapeRegex(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+
+// ============================================
+// 页面初始化 - Page Initialization
+// ============================================
+
+// 等待DOM加载完成后初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initApp();
+    });
+} else {
+    // DOM已经加载完成
+    initApp();
+}
+
+/**
+ * 初始化应用
+ */
+function initApp() {
+    console.log('Initializing application...');
+    
+    // 初始化认证
+    initAuth();
+    
+    // 添加登出按钮
+    addLogoutButton();
+    
+    // 初始化搜索和排序
+    initSearchAndSort();
+    
+    // 初始化分页
+    initPagination();
+    
+    // 加载任务列表
+    loadTasks();
+    
+    console.log('Application initialized successfully');
 }
