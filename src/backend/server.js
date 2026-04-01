@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const passport = require('passport');
 const { 
   initDatabase,
   createTenant, getTenantById, getTenantBySubdomain,
@@ -17,6 +18,9 @@ const {
   getAllTags
 } = require('./database');
 
+// OAuth imports
+const { initializePassport, getOAuthRoutes, getAvailableProviders } = require('./oauth');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -25,6 +29,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Passport初始化
+app.use(passport.initialize());
 
 // 静态文件服务（前端）
 app.use(express.static(path.join(__dirname, '../frontend')));
@@ -102,6 +109,27 @@ app.get('/health', (req, res) => {
     version: '2.1.0'
   });
 });
+
+// ==================== OAuth相关 ====================
+
+// 获取可用的OAuth提供商列表
+app.get('/api/auth/providers', (req, res) => {
+  const providers = getAvailableProviders();
+  res.json({ 
+    providers,
+    github: {
+      enabled: providers.includes('github'),
+      url: '/api/auth/github'
+    },
+    google: {
+      enabled: providers.includes('google'),
+      url: '/api/auth/google'
+    }
+  });
+});
+
+// 挂载OAuth路由
+app.use('/api/auth', getOAuthRoutes());
 
 // ==================== 认证相关 ====================
 
