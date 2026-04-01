@@ -28,13 +28,15 @@ document.addEventListener('DOMContentLoaded', () => {
   registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    const tenant_name = document.getElementById('tenant_name').value.trim();
+    const subdomain = document.getElementById('subdomain').value.trim();
     const name = nameInput.value.trim();
     const email = emailInput.value.trim();
     const password = passwordInput.value;
     const confirmPassword = confirmPasswordInput.value;
 
     // 验证输入
-    if (!name || !email || !password || !confirmPassword) {
+    if (!tenant_name || !subdomain || !name || !email || !password || !confirmPassword) {
       showNotification('Please fill in all fields', 'error');
       return;
     }
@@ -58,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     submitButton.textContent = 'Registering...';
 
     try {
-      const result = await authService.register(email, password, name);
+      const result = await authService.register(email, password, name, tenant_name, subdomain);
 
       if (result.success) {
         showNotification('Registration successful!', 'success');
@@ -66,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
           window.location.href = 'index.html';
         }, 1000);
       } else {
-        showNotification(result.message || 'Registration failed', 'error');
+        showNotification(result.error || 'Registration failed', 'error');
         submitButton.disabled = false;
         submitButton.textContent = 'Register';
       }

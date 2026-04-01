@@ -11,25 +11,31 @@ class AuthService {
   /**
    * 注册
    */
-  async register(email, password, name) {
+  async register(email, password, name, tenant_name = null, subdomain = null) {
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('http://localhost:3000/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password, name })
+        body: JSON.stringify({ 
+          tenant_name,
+          subdomain,
+          email, 
+          password, 
+          name 
+        })
       });
 
       const data = await response.json();
 
-      if (data.success) {
-        this.token = data.data.token;
-        this.user = data.data.user;
+      if (response.ok && data.message) {
+        this.token = data.token;
+        this.user = data.user;
         this.saveToken();
-        return { success: true, data: data.data };
+        return { success: true, data: { token: data.token, user: data.user, tenant: data.tenant } };
       } else {
-        return { success: false, error: data.error };
+        return { success: false, error: data.error || 'Registration failed' };
       }
     } catch (error) {
       console.error('注册失败:', error);
