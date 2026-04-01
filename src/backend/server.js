@@ -204,6 +204,9 @@ async function startServer() {
     // 初始化数据库
     await initDatabase();
     
+    // 初始化Passport OAuth策略
+    initializePassport();
+    
     // 启动服务器
     app.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
