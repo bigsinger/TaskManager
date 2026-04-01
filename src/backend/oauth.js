@@ -179,38 +179,60 @@ function getOAuthRoutes() {
   const router = express.Router();
 
   // GitHub OAuth routes
-  router.get('/github',
-    passport.authenticate('github', { scope: ['user:email'] })
-  );
-
-  router.get('/github/callback',
-    passport.authenticate('github', { failureRedirect: '/login?error=oauth_failed' }),
-    (req, res) => {
-      // Successful authentication
-      const token = generateToken(req.user);
-      const tenant = { id: req.user.tenant_id };
-      
-      // Redirect to frontend with token
-      res.redirect(`/oauth/callback?token=${token}&tenant_id=${tenant.id}`);
+  router.get('/github', (req, res, next) => {
+    if (!isOAuthConfigured('github')) {
+      return res.status(503).json({ 
+        error: 'GitHub OAuth is not configured',
+        message: 'Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env file'
+      });
     }
-  );
+    passport.authenticate('github', { scope: ['user:email'] })(req, res, next);
+  });
+
+  router.get('/github/callback', (req, res, next) => {
+    if (!isOAuthConfigured('github')) {
+      return res.status(503).json({ 
+        error: 'GitHub OAuth is not configured',
+        message: 'Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env file'
+      });
+    }
+    passport.authenticate('github', { failureRedirect: '/login?error=oauth_failed' })(req, res, next);
+  }, (req, res) => {
+    // Successful authentication
+    const token = generateToken(req.user);
+    const tenant = { id: req.user.tenant_id };
+    
+    // Redirect to frontend with token
+    res.redirect(`/oauth/callback?token=${token}&tenant_id=${tenant.id}`);
+  });
 
   // Google OAuth routes
-  router.get('/google',
-    passport.authenticate('google', { scope: ['profile', 'email'] })
-  );
-
-  router.get('/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login?error=oauth_failed' }),
-    (req, res) => {
-      // Successful authentication
-      const token = generateToken(req.user);
-      const tenant = { id: req.user.tenant_id };
-      
-      // Redirect to frontend with token
-      res.redirect(`/oauth/callback?token=${token}&tenant_id=${tenant.id}`);
+  router.get('/google', (req, res, next) => {
+    if (!isOAuthConfigured('google')) {
+      return res.status(503).json({ 
+        error: 'Google OAuth is not configured',
+        message: 'Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env file'
+      });
     }
-  );
+    passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+  });
+
+  router.get('/google/callback', (req, res, next) => {
+    if (!isOAuthConfigured('google')) {
+      return res.status(503).json({ 
+        error: 'Google OAuth is not configured',
+        message: 'Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env file'
+      });
+    }
+    passport.authenticate('google', { failureRedirect: '/login?error=oauth_failed' })(req, res, next);
+  }, (req, res) => {
+    // Successful authentication
+    const token = generateToken(req.user);
+    const tenant = { id: req.user.tenant_id };
+    
+    // Redirect to frontend with token
+    res.redirect(`/oauth/callback?token=${token}&tenant_id=${tenant.id}`);
+  });
 
   // OAuth callback handler for frontend
   router.get('/oauth/callback', (req, res) => {
