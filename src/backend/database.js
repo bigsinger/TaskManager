@@ -194,6 +194,9 @@ async function initDatabase() {
       )
     `);
 
+    // 检查并更新tasks表结构（迁移旧版本）
+    await migrateTasksTable();
+
     // 创建默认角色
     await createDefaultRoles();
 
@@ -201,6 +204,35 @@ async function initDatabase() {
   } catch (err) {
     console.error('Error initializing database:', err.message);
     throw err;
+  }
+}
+
+// 迁移tasks表结构
+async function migrateTasksTable() {
+  try {
+    // 检查tasks表是否有tenant_id列
+    const tableInfo = await all(`PRAGMA table_info(tasks)`);
+    const hasTenantId = tableInfo.some(col => col.name === 'tenant_id');
+    
+    if (!hasTenantId) {
+      console.log('Migrating tasks table to v2.1 schema...');
+      
+      // 添加新字段
+      await run('ALTER TABLE tasks ADD COLUMN tenant_id TEXT');
+      await run('ALTER TABLE tasks ADD COLUMN group_id TEXT');
+      await run('ALTER TABLE tasks ADD COLUMN assignee_id TEXT');
+      await run('ALTER TABLE tasks ADD COLUMN priority TEXT DEFAULT "medium"');
+      
+      // 更新现有数据设置默认租户ID
+      await run(`UPDATE tasks SET tenant_id = 'default' WHERE tenant_id IS NULL`);
+      
+      console.log('Tasks table migrated successfully');
+    }
+  } catch (err) {
+    // 如果错误是重复列，忽略它（可能已经迁移过了）
+    if (!err.message.includes('duplicate column name')) {
+      console.error('Error migrating tasks table:', err.message);
+    }
   }
 }
 
