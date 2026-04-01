@@ -136,8 +136,9 @@ function initializePassport() {
       clientID: GITHUB_CLIENT_ID,
       clientSecret: GITHUB_CLIENT_SECRET,
       callbackURL: GITHUB_CALLBACK_URL,
-      scope: ['user:email']
-    }, async (accessToken, refreshToken, profile, done) => {
+      scope: ['user:email'],
+      passReqToCallback: true
+    }, async (req, accessToken, refreshToken, profile, done) => {
       try {
         const user = await findOrCreateOAuthUser(profile, 'github');
         done(null, user);
@@ -156,8 +157,9 @@ function initializePassport() {
       clientID: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
       callbackURL: GOOGLE_CALLBACK_URL,
-      scope: ['profile', 'email']
-    }, async (accessToken, refreshToken, profile, done) => {
+      scope: ['profile', 'email'],
+      passReqToCallback: true
+    }, async (req, accessToken, refreshToken, profile, done) => {
       try {
         const user = await findOrCreateOAuthUser(profile, 'google');
         done(null, user);
@@ -196,9 +198,13 @@ function getOAuthRoutes() {
         message: 'Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env file'
       });
     }
-    passport.authenticate('github', { failureRedirect: '/login?error=oauth_failed' })(req, res, next);
+    passport.authenticate('github', { session: false, failureRedirect: '/login?error=oauth_failed' })(req, res, next);
   }, (req, res) => {
-    // Successful authentication
+    // Successful authentication - user is attached to req by passport
+    if (!req.user) {
+      return res.redirect('/login?error=authentication_failed');
+    }
+    
     const token = generateToken(req.user);
     const tenant = { id: req.user.tenant_id };
     
@@ -224,9 +230,13 @@ function getOAuthRoutes() {
         message: 'Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env file'
       });
     }
-    passport.authenticate('google', { failureRedirect: '/login?error=oauth_failed' })(req, res, next);
+    passport.authenticate('google', { session: false, failureRedirect: '/login?error=oauth_failed' })(req, res, next);
   }, (req, res) => {
-    // Successful authentication
+    // Successful authentication - user is attached to req by passport
+    if (!req.user) {
+      return res.redirect('/login?error=authentication_failed');
+    }
+    
     const token = generateToken(req.user);
     const tenant = { id: req.user.tenant_id };
     
