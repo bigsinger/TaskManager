@@ -498,7 +498,8 @@ async function loadTasks() {
         }
         
         const url = `${API_URL}?${params.toString()}`;
-        const response = await fetch(url);
+        const headers = addAuthHeader();
+        const response = await fetch(url, { headers });
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -734,11 +735,12 @@ async function handleFormSubmit(e) {
 
 // Create new task
 async function createTask(taskData) {
+    const headers = addAuthHeader({
+        'Content-Type': 'application/json'
+    });
     const response = await fetch(API_URL, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify(taskData)
     });
 
@@ -760,11 +762,12 @@ async function createTask(taskData) {
 
 // Update existing task
 async function updateTask(taskId, taskData) {
+    const headers = addAuthHeader({
+        'Content-Type': 'application/json'
+    });
     const response = await fetch(`${API_URL}/${taskId}`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify(taskData)
     });
 
@@ -850,7 +853,8 @@ function selectTask(taskId) {
 // Load task data into form
 async function loadTaskData(taskId) {
     try {
-        const response = await fetch(`${API_URL}/${taskId}`);
+        const headers = addAuthHeader();
+        const response = await fetch(`${API_URL}/${taskId}`, { headers });
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -979,8 +983,10 @@ async function deleteTask(taskId) {
     }
 
     try {
+        const headers = addAuthHeader();
         const response = await fetch(`${API_URL}/${taskId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers
         });
 
         if (!response.ok) {
@@ -1681,4 +1687,43 @@ function highlightSearchResult(text, query) {
  */
 function escapeRegex(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+
+// ============================================
+// 页面初始化 - Page Initialization
+// ============================================
+
+// 等待DOM加载完成后初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initApp();
+    });
+} else {
+    // DOM已经加载完成
+    initApp();
+}
+
+/**
+ * 初始化应用
+ */
+function initApp() {
+    console.log('Initializing application...');
+    
+    // 初始化认证
+    initAuth();
+    
+    // 添加登出按钮
+    addLogoutButton();
+    
+    // 初始化搜索和排序
+    initSearchAndSort();
+    
+    // 初始化分页
+    initPagination();
+    
+    // 加载任务列表
+    loadTasks();
+    
+    console.log('Application initialized successfully');
 }

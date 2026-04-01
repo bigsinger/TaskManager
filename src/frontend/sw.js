@@ -118,14 +118,18 @@ async function networkFirst(request) {
     
     try {
         const networkResponse = await fetch(request);
-        if (networkResponse.ok) {
+        // 只缓存GET请求，不缓存POST/PUT/DELETE等
+        if (networkResponse.ok && request.method === 'GET') {
             cache.put(request, networkResponse.clone());
         }
         return networkResponse;
     } catch (error) {
-        const cached = await cache.match(request);
-        if (cached) {
-            return cached;
+        // 只对GET请求使用缓存回退
+        if (request.method === 'GET') {
+            const cached = await cache.match(request);
+            if (cached) {
+                return cached;
+            }
         }
         throw error;
     }
