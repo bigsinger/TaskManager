@@ -251,6 +251,22 @@
   <script src="authService.js"></script>
   <script src="login.js"></script>
   <script>
+    // Configure API base URL
+    const API_BASE_URL = 'http://localhost:3000';
+    
+    // Update OAuth links to point to backend server
+    document.addEventListener('DOMContentLoaded', function() {
+      const githubBtn = document.querySelector('.oauth-btn.github');
+      const googleBtn = document.querySelector('.oauth-btn.google');
+      
+      if (githubBtn) {
+        githubBtn.href = `${API_BASE_URL}/api/auth/github`;
+      }
+      if (googleBtn) {
+        googleBtn.href = `${API_BASE_URL}/api/auth/google`;
+      }
+    });
+    
     // Settings functionality
     (function() {
       const settingsBtn = document.getElementById('settings-btn');
