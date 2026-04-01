@@ -3,34 +3,223 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - TaskManager</title>
+  <title data-i18n="loginTitle">Login - TaskManager</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="auth.css">
+  <style>
+    /* Settings button styles */
+    .settings-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--container-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    .settings-btn:hover {
+      transform: rotate(30deg);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* Settings modal */
+    .settings-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .settings-modal.show {
+      display: flex;
+    }
+    .settings-content {
+      background: var(--container-bg);
+      padding: 30px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .settings-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+    .settings-option {
+      margin-bottom: 20px;
+    }
+    .settings-option label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .settings-option select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: var(--text-color);
+      font-size: 1rem;
+    }
+  </style>
 </head>
 <body>
-  <div class="auth-container">
-    <div class="auth-card">
-      <div class="auth-header">
-        <h1>Login</h1>
-        <p>Welcome back to TaskManager</p>
+  <!-- Settings Button -->
+  <button class="settings-btn" id="settings-btn" title="Settings">⚙️</button>
+  
+  <!-- Settings Modal -->
+  <div class="settings-modal" id="settings-modal">
+    <div class="settings-content">
+      <div class="settings-header">
+        <h2 data-i18n="settings">Settings</h2>
+        <button class="close-btn" id="close-settings">&times;</button>
       </div>
-      <form id="login-form">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" name="email" required placeholder="Enter your email">
-        </div>
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" required placeholder="Enter your password">
-        </div>
-        <button type="submit" class="btn btn-primary btn-block">Login</button>
-      </form>
-      <div class="auth-footer">
-        <p>Don't have an account? <a href="register.html">Register</a></p>
+      
+      <div class="settings-option">
+        <label data-i18n="language">Language</label>
+        <select id="language-select">
+          <option value="zh">中文</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      
+      <div class="settings-option">
+        <label data-i18n="theme">Theme</label>
+        <select id="theme-select">
+          <option value="light" data-i18n="light">Light</option>
+          <option value="dark" data-i18n="dark">Dark</option>
+          <option value="system" data-i18n="system">System</option>
+        </select>
       </div>
     </div>
   </div>
+
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1 data-i18n="login">Login</h1>
+        <p data-i18n="loginSubtitle">Welcome back to TaskManager</p>
+      </div>
+      
+      <!-- Subdomain input for multi-tenant -->
+      <form id="login-form">
+        <div class="form-group">
+          <label for="subdomain" data-i18n="company">Company</label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="text" id="subdomain" name="subdomain" required placeholder="company" style="flex: 1;">
+            <span style="color: var(--text-secondary);">.taskmanager.com</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="email" data-i18n="email">Email</label>
+          <input type="email" id="email" name="email" required placeholder="Enter your email">
+        </div>
+        <div class="form-group">
+          <label for="password" data-i18n="password">Password</label>
+          <input type="password" id="password" name="password" required placeholder="Enter your password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" data-i18n="loginButton">Login</button>
+      </form>
+      <div class="auth-footer">
+        <p data-i18n="noAccount">Don't have an account? <a href="register.html" data-i18n="register">Register</a></p>
+      </div>
+    </div>
+  </div>
+  
   <script src="authService.js"></script>
   <script src="login.js"></script>
+  <script>
+    // Settings functionality
+    (function() {
+      const settingsBtn = document.getElementById('settings-btn');
+      const settingsModal = document.getElementById('settings-modal');
+      const closeSettings = document.getElementById('close-settings');
+      const languageSelect = document.getElementById('language-select');
+      const themeSelect = document.getElementById('theme-select');
+      
+      // Load saved preferences
+      const savedLang = localStorage.getItem('language') || 'zh';
+      const savedTheme = localStorage.getItem('theme') || 'system';
+      
+      languageSelect.value = savedLang;
+      themeSelect.value = savedTheme;
+      
+      // Apply theme
+      function applyTheme(theme) {
+        if (theme === 'system') {
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+        } else {
+          document.documentElement.setAttribute('data-theme', theme);
+        }
+      }
+      
+      applyTheme(savedTheme);
+      
+      // Toggle modal
+      settingsBtn.addEventListener('click', () => {
+        settingsModal.classList.add('show');
+      });
+      
+      closeSettings.addEventListener('click', () => {
+        settingsModal.classList.remove('show');
+      });
+      
+      settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+          settingsModal.classList.remove('show');
+        }
+      });
+      
+      // Language change
+      languageSelect.addEventListener('change', (e) => {
+        localStorage.setItem('language', e.target.value);
+        // Reload to apply translations
+        window.location.reload();
+      });
+      
+      // Theme change
+      themeSelect.addEventListener('change', (e) => {
+        const theme = e.target.value;
+        localStorage.setItem('theme', theme);
+        applyTheme(theme);
+      });
+      
+      // Listen for system theme changes
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        if (localStorage.getItem('theme') === 'system') {
+          applyTheme('system');
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
