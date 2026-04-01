@@ -28,6 +28,8 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/google/callback';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const APP_URL = process.env.APP_URL || 'http://localhost:3001';
+
 const jwt = require('jsonwebtoken');
 
 // Generate JWT token
@@ -209,7 +211,8 @@ function getOAuthRoutes() {
     const tenant = { id: req.user.tenant_id };
     
     // Redirect to frontend with token
-    res.redirect(`/oauth/callback?token=${token}&tenant_id=${tenant.id}`);
+    const frontendCallbackUrl = `${APP_URL}/oauth/callback?token=${token}&tenant_id=${tenant.id}`;
+    res.redirect(frontendCallbackUrl);
   });
 
   // Google OAuth routes
@@ -241,7 +244,8 @@ function getOAuthRoutes() {
     const tenant = { id: req.user.tenant_id };
     
     // Redirect to frontend with token
-    res.redirect(`/oauth/callback?token=${token}&tenant_id=${tenant.id}`);
+    const frontendCallbackUrl = `${APP_URL}/oauth/callback?token=${token}&tenant_id=${tenant.id}`;
+    res.redirect(frontendCallbackUrl);
   });
 
   // OAuth callback handler for frontend
