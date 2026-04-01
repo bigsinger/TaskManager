@@ -1179,6 +1179,7 @@ function checkAuth() {
 
 function addAuthHeader(headers = {}) {
     const token = authService.getToken();
+    console.log('addAuthHeader called, token:', token ? 'exists' : 'missing');
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
@@ -1205,6 +1206,8 @@ function updateUserInfo() {
 function initAuth() {
     // 加载本地存储的认证信息
     authService.loadToken();
+    console.log('initAuth: token loaded:', authService.getToken() ? 'yes' : 'no');
+    console.log('initAuth: user loaded:', authService.getUser());
     
     // 更新用户信息（如果已登录）
     updateUserInfo();
