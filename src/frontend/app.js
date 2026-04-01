@@ -588,12 +588,19 @@ function renderTasks(tasks) {
         let tagsArray = [];
         if (task.tags) {
             try {
+                // Debug: log original tags
+                console.log('Original tags:', task.tags, 'Type:', typeof task.tags);
+                
                 // Try JSON parse first
                 let parsed = typeof task.tags === 'string' ? JSON.parse(task.tags) : task.tags;
+                
+                // Debug: log after first parse
+                console.log('After first parse:', parsed, 'Type:', typeof parsed);
                 
                 // If parsed is a string, try parsing again (nested JSON issue)
                 if (typeof parsed === 'string') {
                     parsed = JSON.parse(parsed);
+                    console.log('After second parse:', parsed, 'Type:', typeof parsed);
                 }
                 
                 // If it's an array, use it
@@ -611,6 +618,9 @@ function renderTasks(tasks) {
                 }
             }
         }
+        
+        // Debug: log final tags
+        console.log('Final tagsArray:', tagsArray);
         
         // Render tags (without brackets)
         const tagsHtml = tagsArray && tagsArray.length > 0 
@@ -694,7 +704,7 @@ async function handleFormSubmit(e) {
         title: document.getElementById('task-title').value,
         description: document.getElementById('task-description').value,
         status: document.getElementById('task-status').value,
-        tags: JSON.stringify(currentTags)
+        tags: currentTags
     };
 
     // Validate form
