@@ -367,7 +367,7 @@ app.put('/api/tasks/:id', authenticateToken, async (req, res) => {
       description,
       status,
       tags
-    });
+    }, user_id);
 
     res.json(task);
   } catch (error) {

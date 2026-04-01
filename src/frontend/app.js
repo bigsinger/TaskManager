@@ -584,17 +584,35 @@ function renderTasks(tasks) {
         // Convert status to camelCase for translation lookup
         const statusKey = task.status.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
         
-        // Parse tags from JSON string
+        // Parse tags from JSON string or comma-separated string
         let tagsArray = [];
         if (task.tags) {
             try {
-                tagsArray = typeof task.tags === 'string' ? JSON.parse(task.tags) : task.tags;
+                // Try JSON parse first
+                let parsed = typeof task.tags === 'string' ? JSON.parse(task.tags) : task.tags;
+                
+                // If parsed is a string, try parsing again (nested JSON issue)
+                if (typeof parsed === 'string') {
+                    parsed = JSON.parse(parsed);
+                }
+                
+                // If it's an array, use it
+                if (Array.isArray(parsed)) {
+                    tagsArray = parsed.filter(tag => tag && typeof tag === 'string' && tag.trim() !== '');
+                }
+                // If it's a string, split by comma
+                else if (typeof parsed === 'string') {
+                    tagsArray = parsed.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+                }
             } catch (e) {
-                tagsArray = [];
+                // If all else fails, try comma-separated
+                if (typeof task.tags === 'string') {
+                    tagsArray = task.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+                }
             }
         }
         
-        // Render tags
+        // Render tags (without brackets)
         const tagsHtml = tagsArray && tagsArray.length > 0 
             ? `<div class="task-tags">${tagsArray.map(tag => `<span class="task-tag">${escapeHtml(tag)}</span>`).join('')}</div>`
             : '';
@@ -622,7 +640,9 @@ function renderTasks(tasks) {
                 ${task.description ? escapeHtml(task.description) : ''}
             </div>
             <div class="task-meta">
-                ${t('created')} ${new Date(task.createdAt + 'Z').toLocaleString()}
+                <span title="创建时间">📅 ${formatDate(task.createdAt)}</span>
+                ${task.updatedAt && task.updatedAt !== task.createdAt ? 
+                    `<span title="最后修改">✏️ ${formatDate(task.updatedAt)}</span>` : ''}
             </div>
         </div>
     `}).join('');
@@ -700,9 +720,13 @@ async function handleFormSubmit(e) {
             // Check if the new task is visible under current filters
             const isTaskVisible = isTaskVisibleUnderFilters(newTask);
             
-            if (!isTaskVisible) {
+            if (isTaskVisible) {
+                // Add to current tasks array and re-render
+                allTasks.unshift(newTask);
+                renderTasks(allTasks);
+            } else {
                 // Show toast notification if task is not visible
-                showToast(t('taskCreatedHidden'), 'warning');
+                showToast(t('taskCreatedHidden') || 'Task created but not visible with current filters', 'warning');
             }
         }
         
@@ -1038,6 +1062,33 @@ async function deleteTask(taskId) {
         console.error('Error deleting task:', error);
         alert(`${t('deleteError')}\n\n${error.message}`);
     }
+}
+
+// Helper function to format date
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'N/A';
+    
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return '刚刚';
+    if (diffMins < 60) return `${diffMins}分钟前`;
+    if (diffHours < 24) return `${diffHours}小时前`;
+    if (diffDays < 7) return `${diffDays}天前`;
+    
+    return date.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 // Helper function to escape HTML
