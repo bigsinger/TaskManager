@@ -380,7 +380,7 @@ app.put('/api/tasks/:id', authenticateToken, async (req, res) => {
 app.delete('/api/tasks/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { tenant_id } = req.user;
+    const { id: user_id, tenant_id } = req.user;
 
     // 检查任务是否存在
     const existingTask = await getTaskById(id, tenant_id);
@@ -388,7 +388,7 @@ app.delete('/api/tasks/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    const success = await deleteTask(id, tenant_id);
+    const success = await deleteTask(id, tenant_id, user_id);
     
     if (success) {
       res.json({ message: 'Task deleted successfully' });
