@@ -211,7 +211,7 @@ function getOAuthRoutes() {
     const tenant = { id: req.user.tenant_id };
     
     // Redirect to frontend with token
-    const frontendCallbackUrl = `${APP_URL}/oauth/callback?token=${token}&tenant_id=${tenant.id}`;
+    const frontendCallbackUrl = `${APP_URL}/oauth-callback.html?token=${token}&tenant_id=${tenant.id}`;
     res.redirect(frontendCallbackUrl);
   });
 
@@ -244,7 +244,7 @@ function getOAuthRoutes() {
     const tenant = { id: req.user.tenant_id };
     
     // Redirect to frontend with token
-    const frontendCallbackUrl = `${APP_URL}/oauth/callback?token=${token}&tenant_id=${tenant.id}`;
+    const frontendCallbackUrl = `${APP_URL}/oauth-callback.html?token=${token}&tenant_id=${tenant.id}`;
     res.redirect(frontendCallbackUrl);
   });
 
