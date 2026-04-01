@@ -63,6 +63,14 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
     
+    // OAuth回调页面 - 直接网络请求，不缓存
+    if (url.pathname.includes('oauth-callback.html') || url.search.includes('token=')) {
+        event.respondWith(fetch(request).catch(() => {
+            return new Response('Network error', { status: 503 });
+        }));
+        return;
+    }
+    
     // API请求 - 网络优先，缓存回退
     if (API_ROUTES.some(route => url.pathname.includes(route))) {
         event.respondWith(networkFirst(request));
