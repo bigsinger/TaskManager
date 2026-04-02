@@ -16,7 +16,7 @@ const {
   assignRole, getUserRoles, checkPermission,
   getTasks, getTaskById, createTask, updateTask, deleteTask,
   getTaskComments, createComment, updateComment, deleteComment,
-  getTaskActivities,
+  logTaskActivity, getTaskActivities,
   getAllTags
 } = require('./database');
 

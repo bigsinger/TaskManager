@@ -166,16 +166,34 @@
                         <div class="form-group">
                             <label>预计耗时</label>
                             <div id="estimated-time-selector" class="estimated-time-selector-simple">
-                                <div style="display: flex; gap: 8px;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
                                     <input type="number" id="estimated-time-value" placeholder="数字" min="1" style="flex: 1; padding: 10px 14px; border: 2px solid #e5e7eb; border-radius: 6px; min-width: 80px; font-size: 16px;">
-                                        <option value="">选择单位</option>
-                                        <option value="h">小时</option>
-                                        <option value="d">天</option>
-                                        <option value="w">周</option>
-                                        <option value="mo">月</option>
-                                        <option value="q">季度</option>
-                                        <option value="y">年</option>
-                                    </select>
+                                </div>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <label class="radio-button">
+                                        <input type="radio" name="estimated-time-unit" value="h">
+                                        <span>小时</span>
+                                    </label>
+                                    <label class="radio-button">
+                                        <input type="radio" name="estimated-time-unit" value="d">
+                                        <span>天</span>
+                                    </label>
+                                    <label class="radio-button">
+                                        <input type="radio" name="estimated-time-unit" value="w">
+                                        <span>周</span>
+                                    </label>
+                                    <label class="radio-button">
+                                        <input type="radio" name="estimated-time-unit" value="mo">
+                                        <span>月</span>
+                                    </label>
+                                    <label class="radio-button">
+                                        <input type="radio" name="estimated-time-unit" value="q">
+                                        <span>季度</span>
+                                    </label>
+                                    <label class="radio-button">
+                                        <input type="radio" name="estimated-time-unit" value="y">
+                                        <span>年</span>
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -215,17 +233,32 @@
                             </div>
                         </div>
                         
-                        <!-- 任务时间线（仅编辑时显示） -->
-                        <div id="task-timeline-section" class="form-group" style="display: none;">
-                            <label>任务时间线</label>
-                            <div id="task-timeline-container"></div>
-                        </div>
-                        
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary" data-i18n="saveTask">Save Task</button>
                             <button type="button" class="btn btn-secondary" id="cancel-btn" data-i18n="cancel">Cancel</button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Update Task Modal -->
+        <div id="update-task-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>更新任务</h2>
+                    <span class="close" onclick="closeUpdateTaskModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <input type="hidden" id="update-task-id">
+                        <label>更新内容</label>
+                        <textarea id="update-task-content" rows="5" placeholder="输入更新内容..." style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-primary" onclick="submitUpdateTask()">提交更新</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeUpdateTaskModal()">取消</button>
+                    </div>
                 </div>
             </div>
         </div>

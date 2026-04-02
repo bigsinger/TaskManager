@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 const DB_PATH = path.join(__dirname, 'tasks.db');
 
@@ -731,7 +732,6 @@ async function deleteComment(id) {
 // ==================== 活动日志相关 ====================
 
 async function logTaskActivity(task_id, user_id, action, old_value, new_value) {
-  const { v4: uuidv4 } = require('uuid');
   const id = uuidv4();
   await run(
     'INSERT INTO task_activities (id, task_id, user_id, action, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?)',

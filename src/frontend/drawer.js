@@ -240,6 +240,21 @@ async function openTimelineDrawer(taskId) {
 
     if (!drawerContainer || !timelineDrawer || !timelineContainer) return;
 
+    // 计算时间线抽屉的位置和高度
+    const containerRect = drawerContainer.getBoundingClientRect();
+    const taskList = document.getElementById('task-list');
+    const taskListRect = taskList ? taskList.getBoundingClientRect() : null;
+    
+    if (taskListRect) {
+        // 设置抽屉为fixed定位，覆盖从任务到任务列表底部的区域
+        timelineDrawer.style.position = 'fixed';
+        timelineDrawer.style.top = `${containerRect.top}px`;
+        timelineDrawer.style.left = `${containerRect.right}px`;
+        timelineDrawer.style.width = `${Math.min(taskListRect.right - containerRect.right, 600)}px`;
+        timelineDrawer.style.height = `${taskListRect.bottom - containerRect.top}px`;
+        timelineDrawer.style.zIndex = '1000';
+    }
+
     // 打开抽屉
     timelineDrawer.classList.add('open');
 
@@ -306,6 +321,13 @@ function closeTimelineDrawer(taskId) {
     const timelineDrawer = drawerContainer?.querySelector('.timeline-drawer');
     if (timelineDrawer) {
         timelineDrawer.classList.remove('open');
+        // 恢复原始样式
+        timelineDrawer.style.position = '';
+        timelineDrawer.style.top = '';
+        timelineDrawer.style.left = '';
+        timelineDrawer.style.width = '';
+        timelineDrawer.style.height = '';
+        timelineDrawer.style.zIndex = '';
     }
 }
 

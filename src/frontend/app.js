@@ -694,6 +694,9 @@ function renderTasks(tasks) {
                     <span title="创建时间">📅 ${formatDate(task.createdAt)}</span>
                     ${task.updatedAt && task.updatedAt !== task.createdAt ? 
                         `<span title="最后修改">✏️ ${formatDate(task.updatedAt)}</span>` : ''}
+                    <button class="btn-update-task" onclick="event.stopPropagation(); openUpdateTaskModal('${task.id}')" title="更新任务">
+                        💬 更新
+                    </button>
                 </div>
             </div>
             <!-- 状态抽屉 -->
@@ -763,7 +766,8 @@ async function handleFormSubmit(e) {
     
     const taskId = document.getElementById('task-id').value;
     const estimatedTimeValue = document.getElementById('estimated-time-value').value;
-    const estimatedTimeUnit = document.getElementById('estimated-time-unit').value;
+    const estimatedTimeUnitInput = document.querySelector('input[name="estimated-time-unit"]:checked');
+    const estimatedTimeUnit = estimatedTimeUnitInput ? estimatedTimeUnitInput.value : '';
     
     const taskData = {
         title: document.getElementById('task-title').value,
@@ -989,6 +993,67 @@ async function editTask(taskId) {
     }
     
     showForm(true, taskId);
+}
+
+// Open update task modal
+function openUpdateTaskModal(taskId) {
+    event.stopPropagation();
+    const updateTaskModal = document.getElementById('update-task-modal');
+    const updateTaskId = document.getElementById('update-task-id');
+    const updateTaskContent = document.getElementById('update-task-content');
+    
+    if (updateTaskModal && updateTaskId && updateTaskContent) {
+        updateTaskId.value = taskId;
+        updateTaskContent.value = '';
+        updateTaskModal.classList.add('show');
+        updateTaskContent.focus();
+    }
+}
+
+// Close update task modal
+function closeUpdateTaskModal() {
+    const updateTaskModal = document.getElementById('update-task-modal');
+    const updateTaskContent = document.getElementById('update-task-content');
+    
+    if (updateTaskModal) {
+        updateTaskModal.classList.remove('show');
+        if (updateTaskContent) {
+            updateTaskContent.value = '';
+        }
+    }
+}
+
+// Submit update task
+async function submitUpdateTask() {
+    const updateTaskId = document.getElementById('update-task-id').value;
+    const updateTaskContent = document.getElementById('update-task-content').value.trim();
+    
+    if (!updateTaskId || !updateTaskContent) {
+        showToast('请输入更新内容', 'error');
+        return;
+    }
+    
+    try {
+        const headers = addAuthHeader({ 'Content-Type': 'application/json' });
+        const response = await fetch(`${API_URL}/${updateTaskId}/comments`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ content: updateTaskContent })
+        });
+        
+        if (response.ok) {
+            showToast('更新成功', 'success');
+            closeUpdateTaskModal();
+            // 刷新任务列表
+            loadTasks();
+        } else {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Failed to submit update');
+        }
+    } catch (error) {
+        console.error('Error submitting update:', error);
+        showToast('更新失败', 'error');
+    }
 }
 
 // Select task

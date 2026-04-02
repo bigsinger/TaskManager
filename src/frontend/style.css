@@ -650,6 +650,32 @@ header h1 {
     border: none;
 }
 
+/* Update Task Button */
+.btn-update-task {
+    padding: 4px 10px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #90caf9;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-update-task:hover {
+    background: #bbdefb;
+    border-color: #64b5f6;
+    transform: translateY(-1px);
+}
+
+.btn-update-task:active {
+    transform: translateY(0);
+}
+
 /* Filter Section */
 .filter-section {
     margin-bottom: 20px;
@@ -1133,4 +1159,42 @@ header h1 {
 .no-search-results-hint {
     font-size: 14px;
     opacity: 0.7;
+}
+
+/* 单选按钮样式 */
+.radio-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: white;
+    user-select: none;
+}
+
+.radio-button:hover {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.radio-button input[type="radio"] {
+    display: none;
+}
+
+.radio-button input[type="radio"]:checked + span {
+    font-weight: 600;
+}
+
+.radio-button:has(input[type="radio"]:checked) {
+    background: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+
+.radio-button span {
+    font-size: 14px;
+    transition: color 0.3s;
 }
