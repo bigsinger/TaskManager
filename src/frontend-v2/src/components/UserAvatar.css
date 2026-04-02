@@ -1,0 +1,112 @@
+/* =============================================
+ * 用户头像样式
+ * ============================================= */
+
+.user-avatar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: default;
+}
+
+.user-avatar.avatar-clickable {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.user-avatar.avatar-clickable:hover {
+  transform: scale(1.05);
+}
+
+/* 头像尺寸 */
+.user-avatar.avatar-small {
+  padding: 4px 8px;
+}
+
+.user-avatar.avatar-small .avatar-image,
+.user-avatar.avatar-small .avatar-placeholder {
+  width: 28px;
+  height: 28px;
+}
+
+.user-avatar.avatar-medium {
+  padding: 6px 12px;
+}
+
+.user-avatar.avatar-medium .avatar-image,
+.user-avatar.avatar-medium .avatar-placeholder {
+  width: 36px;
+  height: 36px;
+}
+
+.user-avatar.avatar-large {
+  padding: 8px 16px;
+}
+
+.user-avatar.avatar-large .avatar-image,
+.user-avatar.avatar-large .avatar-placeholder {
+  width: 48px;
+  height: 48px;
+}
+
+/* 头像图片 */
+.avatar-image {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #667eea;
+}
+
+/* 头像占位符 */
+.avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  border: 2px solid #667eea;
+}
+
+/* 用户信息 */
+.avatar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.avatar-name {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* 尺寸变体 */
+.avatar-small .avatar-name {
+  font-size: 13px;
+}
+
+.avatar-large .avatar-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .avatar-name {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .avatar-small .avatar-name {
+    display: none;
+  }
+}

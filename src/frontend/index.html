@@ -37,7 +37,14 @@
                 <h1 data-i18n="title">Task Manager</h1>
                 <h2 id="subtitle" class="subtitle">My Tasks</h2>
             </div>
+            
+            <!-- Context Switcher -->
+            <div id="context-switcher" class="context-switcher-container"></div>
+            
             <div class="header-actions">
+                <!-- User Avatar -->
+                <div id="user-avatar" class="user-avatar-container"></div>
+                
                 <div class="user-info" id="user-info">
                     <span class="user-name"></span>
                 </div>
@@ -80,6 +87,14 @@
             <div id="tag-cloud" class="tag-cloud">
                 <p data-i18n="noTags">No tags yet</p>
             </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <button id="favorite-filter-btn" class="filter-toggle-btn" data-active="false">
+                <span class="filter-icon">⭐</span>
+                <span class="filter-text" data-i18n="showFavorites">只看收藏</span>
+            </button>
         </div>
 
         <!-- Settings Modal -->
@@ -145,6 +160,50 @@
                                 <option value="in-progress" data-i18n="inProgress">In Progress</option>
                                 <option value="completed" data-i18n="completed">Completed</option>
                             </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>预计耗时</label>
+                            <div id="estimated-time-selector" class="estimated-time-selector-simple">
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="number" id="estimated-time-value" placeholder="数字" min="1" style="flex: 1; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px;">
+                                    <select id="estimated-time-unit" style="padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; min-width: 120px;">
+                                        <option value="">选择单位</option>
+                                        <option value="h">小时</option>
+                                        <option value="d">天</option>
+                                        <option value="w">周</option>
+                                        <option value="mo">月</option>
+                                        <option value="q">季度</option>
+                                        <option value="y">年</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>任务角色</label>
+                            <div id="role-selector" class="role-selector-simple">
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <label style="min-width: 80px; font-size: 14px;">执行者：</label>
+                                        <select id="role-assignee" style="flex: 1; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px;">
+                                            <option value="">未分配</option>
+                                        </select>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <label style="min-width: 80px; font-size: 14px;">报告人：</label>
+                                        <select id="role-reporter" style="flex: 1; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px;">
+                                            <option value="">未分配</option>
+                                        </select>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <label style="min-width: 80px; font-size: 14px;">验证人：</label>
+                                        <select id="role-verifier" style="flex: 1; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px;">
+                                            <option value="">未分配</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="form-group">

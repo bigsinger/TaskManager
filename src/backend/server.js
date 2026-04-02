@@ -57,6 +57,14 @@ app.use(passport.initialize());
 // 静态文件服务（前端）
 app.use(express.static(path.join(__dirname, '../frontend')));
 
+// 情境（Context）路由
+const contextsRouter = require('./src/application/routes/contexts.route');
+app.use('/api/contexts', contextsRouter);
+
+// 用户路由
+const usersRouter = require('./src/application/routes/users.route');
+app.use('/api/users', usersRouter);
+
 // 健康检查
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -397,6 +405,41 @@ app.delete('/api/tasks/:id', authenticateToken, async (req, res) => {
     }
   } catch (error) {
     console.error('Error deleting task:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 切换任务收藏状态
+app.patch('/api/tasks/:id/favorite', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { id: user_id, tenant_id } = req.user;
+
+    // 检查任务是否存在
+    const existingTask = await getTaskById(id, tenant_id);
+    if (!existingTask) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // 切换收藏状态
+    const newFavoriteState = existingTask.is_favorite ? 0 : 1;
+    await run(
+      'UPDATE tasks SET is_favorite = ?, updatedAt = ? WHERE id = ? AND tenant_id = ?',
+      [newFavoriteState, new Date().toISOString(), id, tenant_id]
+    );
+
+    // 记录活动
+    await logTaskActivity(id, user_id, newFavoriteState ? 'favorite' : 'unfavorite', null, null);
+
+    // 返回更新后的任务
+    const updatedTask = await getTaskById(id, tenant_id);
+    res.json({
+      success: true,
+      is_favorite: !!newFavoriteState,
+      message: newFavoriteState ? 'Task favorited' : 'Task unfavorited'
+    });
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

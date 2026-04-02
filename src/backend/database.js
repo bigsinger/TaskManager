@@ -573,7 +573,23 @@ async function createTask({ tenant_id, group_id, creator_id, assignee_id, title,
   const { v4: uuidv4 } = require('uuid');
   const id = uuidv4();
   const now = new Date().toISOString();
-  const tagsStr = Array.isArray(tags) ? tags.join(',') : tags;
+  let tagsStr = tags || '';
+
+  // 处理tags：如果是数组，转换为逗号分隔的字符串
+  if (Array.isArray(tags)) {
+    tagsStr = tags.join(',');
+  } else if (typeof tags === 'string') {
+    // 尝试解析JSON格式的tags字符串
+    try {
+      const parsed = JSON.parse(tags);
+      if (Array.isArray(parsed)) {
+        tagsStr = parsed.join(',');
+      }
+    } catch (e) {
+      // 不是JSON格式，直接使用原字符串（假设已经是逗号分隔的）
+      tagsStr = tags;
+    }
+  }
 
   await run(`
     INSERT INTO tasks (id, tenant_id, group_id, creator_id, assignee_id, title, description, status, priority, tags, due_date, createdAt, updatedAt)
@@ -596,7 +612,29 @@ async function updateTask(id, tenant_id, updates, user_id) {
   for (const [key, value] of Object.entries(updates)) {
     if (allowedFields.includes(key)) {
       fields.push(`${key} = ?`);
-      params.push(key === 'tags' && Array.isArray(value) ? value.join(',') : value);
+      
+      // 特殊处理tags字段
+      if (key === 'tags') {
+        let tagsValue = value;
+        // 如果是数组，转换为逗号分隔的字符串
+        if (Array.isArray(value)) {
+          tagsValue = value.join(',');
+        } else if (typeof value === 'string') {
+          // 尝试解析JSON格式的tags字符串
+          try {
+            const parsed = JSON.parse(value);
+            if (Array.isArray(parsed)) {
+              tagsValue = parsed.join(',');
+            }
+          } catch (e) {
+            // 不是JSON格式，直接使用原字符串
+            tagsValue = value;
+          }
+        }
+        params.push(tagsValue);
+      } else {
+        params.push(value);
+      }
     }
   }
 

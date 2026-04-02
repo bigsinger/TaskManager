@@ -3,7 +3,7 @@
  * 实现离线访问和性能优化
  */
 
-const CACHE_NAME = 'taskmanager-v1.2.0';
+const CACHE_NAME = 'taskmanager-v1.3.0';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -41,20 +41,27 @@ self.addEventListener('install', (event) => {
 // 激活 - 清理旧缓存
 self.addEventListener('activate', (event) => {
     console.log('Service Worker activating...');
-    
+
     event.waitUntil(
         caches.keys()
             .then(cacheNames => {
+                console.log('Current caches:', cacheNames);
                 return Promise.all(
                     cacheNames
-                        .filter(name => name !== CACHE_NAME && name !== API_CACHE_NAME)
-                        .map(name => {
-                            console.log('Deleting old cache:', name);
-                            return caches.delete(name);
+                        .filter(name => {
+                            const shouldDelete = name !== CACHE_NAME && name !== API_CACHE_NAME;
+                            if (shouldDelete) {
+                                console.log('Deleting old cache:', name);
+                            }
+                            return shouldDelete;
                         })
+                        .map(name => caches.delete(name))
                 );
             })
-            .then(() => self.clients.claim())
+            .then(() => {
+                console.log('Service Worker activated');
+                return self.clients.claim();
+            })
     );
 });
 

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户个人中心 - TaskManager</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="src/frontend-v2/src/components/UserProfilePage.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-title">
+                <h1>个人中心</h1>
+            </div>
+            <button id="back-btn" class="btn btn-secondary">← 返回任务列表</button>
+        </header>
+
+        <main id="user-profile-container">
+            <p>加载中...</p>
+        </main>
+    </div>
+
+    <script src="authService.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // 个人中心页面逻辑
+        document.addEventListener('DOMContentLoaded', async () => {
+            const container = document.getElementById('user-profile-container');
+            const backBtn = document.getElementById('back-btn');
+
+            // 返回按钮
+            backBtn.addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+
+            // 加载用户信息
+            try {
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    container.innerHTML = '<p class="error">未登录，请先登录</p>';
+                    return;
+                }
+
+                const API_URL = window.location.origin.replace(':3001', ':3000') + '/api';
+
+                // 获取用户信息
+                const profileResponse = await fetch(`${API_URL}/users/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!profileResponse.ok) {
+                    throw new Error('Failed to load user profile');
+                }
+
+                const profileData = await profileResponse.json();
+                const user = profileData.data;
+
+                // 获取用户统计
+                const userId = user.id;
+                const statsResponse = await fetch(`${API_URL}/users/${userId}/stats`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const statsData = statsResponse.ok ? await statsResponse.json() : { data: {} };
+                const stats = statsData.data;
+
+                // 渲染个人中心
+                renderUserProfile(container, user, stats);
+            } catch (error) {
+                console.error('Error loading user profile:', error);
+                container.innerHTML = '<p class="error">加载失败</p>';
+            }
+        });
+
+        function renderUserProfile(container, user, stats) {
+            const initials = (user.nickname || user.name || user.email || 'U')
+                .substring(0, 2)
+                .toUpperCase();
+
+            const avatarHtml = user.avatar
+                ? `<img src="${user.avatar}" alt="Avatar">`
+                : `<div class="avatar-placeholder">${initials}</div>`;
+
+            container.innerHTML = `
+                <div class="user-profile-page">
+                    <!-- 个人信息头部 -->
+                    <div class="profile-header">
+                        <div class="profile-avatar">${avatarHtml}</div>
+                        <div class="profile-info">
+                            <h2 class="profile-name">${escapeHtml(user.nickname || user.name)}</h2>
+                            <p class="profile-email">${escapeHtml(user.email)}</p>
+                            <p class="profile-description">${escapeHtml(user.description || '暂无描述')}</p>
+                            <button id="edit-profile-btn" class="btn-edit-profile">编辑资料</button>
+                        </div>
+                    </div>
+
+                    <!-- 统计数据 -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📋</div>
+                            <div class="stat-value">${stats.totalTasks || 0}</div>
+                            <div class="stat-label">总任务数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-value">${stats.completedTasks || 0}</div>
+                            <div class="stat-label">已完成</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">✏️</div>
+                            <div class="stat-value">${stats.createdTasks || 0}</div>
+                            <div class="stat-label">创建的任务</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⭐</div>
+                            <div class="stat-value">${stats.favoriteTasks || 0}</div>
+                            <div class="stat-label">收藏的任务</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 编辑资料模态框 -->
+                <div id="edit-profile-modal" class="modal" style="display: none;">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2>编辑资料</h2>
+                            <button class="btn-close" onclick="closeEditModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label>昵称</label>
+                                <input type="text" id="edit-nickname" value="${escapeHtml(user.nickname || '')}" maxlength="50">
+                            </div>
+                            <div class="form-group">
+                                <label>个人描述</label>
+                                <textarea id="edit-description" rows="4" maxlength="500">${escapeHtml(user.description || '')}</textarea>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn-cancel" onclick="closeEditModal()">取消</button>
+                                <button class="btn-save" onclick="saveProfile()">保存</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 编辑按钮
+            document.getElementById('edit-profile-btn').addEventListener('click', () => {
+                document.getElementById('edit-profile-modal').style.display = 'flex';
+            });
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-profile-modal').style.display = 'none';
+        }
+
+        async function saveProfile() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    alert('未登录');
+                    return;
+                }
+
+                const nickname = document.getElementById('edit-nickname').value.trim();
+                const description = document.getElementById('edit-description').value.trim();
+
+                const API_URL = window.location.origin.replace(':3001', ':3000') + '/api';
+
+                const response = await fetch(`${API_URL}/users/profile`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nickname, description })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update profile');
+                }
+
+                alert('更新成功！');
+                closeEditModal();
+                location.reload();
+            } catch (error) {
+                console.error('Error saving profile:', error);
+                alert('更新失败');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

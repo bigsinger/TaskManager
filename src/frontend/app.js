@@ -202,6 +202,7 @@ let totalPages = 0;
 let allTasks = [];
 let currentTags = [];
 let selectedTaskId = null;
+let showOnlyFavorites = false;
 
 // Load tasks on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -413,6 +414,24 @@ settingsModal.addEventListener('click', (e) => {
     }
 });
 
+// Favorite filter button
+const favoriteFilterBtn = document.getElementById('favorite-filter-btn');
+if (favoriteFilterBtn) {
+    favoriteFilterBtn.addEventListener('click', () => {
+        showOnlyFavorites = !showOnlyFavorites;
+        favoriteFilterBtn.setAttribute('data-active', showOnlyFavorites);
+
+        if (showOnlyFavorites) {
+            favoriteFilterBtn.classList.add('active');
+        } else {
+            favoriteFilterBtn.classList.remove('active');
+        }
+
+        // Reload tasks with new filter
+        loadTasks();
+    });
+}
+
 // Apply theme
 function applyTheme() {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -484,6 +503,11 @@ async function loadTasks() {
             params.append('search', searchQuery);
         }
         
+        // 添加情境筛选参数
+        if (currentContext) {
+            params.append('context_id', currentContext);
+        }
+        
         // 添加排序参数
         params.append('sortBy', sortBy);
         params.append('sortOrder', sortOrder);
@@ -546,6 +570,11 @@ function filterTasks(tasks) {
     // Filter by status
     if (selectedFilters.size > 0) {
         filtered = filtered.filter(task => selectedFilters.has(task.status));
+    }
+    
+    // Filter by favorites
+    if (showOnlyFavorites) {
+        filtered = filtered.filter(task => task.is_favorite);
     }
     
     // Filter by tags
@@ -638,6 +667,16 @@ function renderTasks(tasks) {
             <div class="task-header">
                 <h3 class="task-title">${escapeHtml(task.title)}</h3>
                 ${tagsHtml}
+                ${task.estimated_time ? `
+                    <span class="estimated-time-badge" title="预计耗时">
+                        ⏱️ ${formatEstimatedTime(task.estimated_time)}
+                    </span>
+                ` : ''}
+                <button class="btn-favorite ${task.is_favorite ? 'active' : ''}"
+                        onclick="event.stopPropagation(); toggleFavorite('${task.id}', ${task.is_favorite || false})"
+                        title="${task.is_favorite ? '取消收藏' : '收藏任务'}">
+                    ${task.is_favorite ? '⭐' : '☆'}
+                </button>
                 <span class="status-badge status-${task.status}">
                     ${t(statusKey)}
                 </span>
@@ -700,12 +739,32 @@ async function handleFormSubmit(e) {
     e.preventDefault();
     
     const taskId = document.getElementById('task-id').value;
+    const estimatedTimeValue = document.getElementById('estimated-time-value').value;
+    const estimatedTimeUnit = document.getElementById('estimated-time-unit').value;
+    
     const taskData = {
         title: document.getElementById('task-title').value,
         description: document.getElementById('task-description').value,
         status: document.getElementById('task-status').value,
         tags: currentTags
     };
+
+    // 添加预计耗时
+    if (estimatedTimeValue && estimatedTimeUnit) {
+        taskData.estimated_time = JSON.stringify({
+            value: parseInt(estimatedTimeValue, 10),
+            unit: estimatedTimeUnit
+        });
+    }
+
+    // 添加角色信息
+    const assigneeId = document.getElementById('role-assignee').value || null;
+    const reporterId = document.getElementById('role-reporter').value || null;
+    const verifierId = document.getElementById('role-verifier').value || null;
+
+    if (assigneeId) taskData.assignee_id = assigneeId;
+    if (reporterId) taskData.reporter_id = reporterId;
+    if (verifierId) taskData.verifier_id = verifierId;
 
     // Validate form
     if (!taskData.title || taskData.title.trim() === '') {
@@ -843,6 +902,53 @@ async function updateTask(taskId, taskData) {
     }
     
     return updatedTask;
+}
+
+// Toggle task favorite
+async function toggleFavorite(taskId, isFavorite) {
+    try {
+        const response = await fetch(`${API_URL}/${taskId}/favorite`, {
+            method: 'PATCH',
+            headers: addAuthHeader({
+                'Content-Type': 'application/json'
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Failed to toggle favorite');
+        }
+
+        const result = await response.json();
+
+        // Update task in local array
+        const index = allTasks.findIndex(task => task.id === taskId);
+        if (index !== -1) {
+            allTasks[index].is_favorite = result.is_favorite;
+        }
+
+        // Re-render with current filters and pagination
+        const filteredTasks = filterTasks(allTasks);
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const paginatedTasks = filteredTasks.slice(startIndex, endIndex);
+        renderTasks(paginatedTasks);
+        updatePagination(filteredTasks.length, startIndex + 1, Math.min(endIndex, filteredTasks.length));
+
+        // Restore selected state
+        if (selectedTaskId) {
+            const selectedElement = document.querySelector(`[data-task-id="${selectedTaskId}"]`);
+            if (selectedElement) {
+                selectedElement.classList.add('selected');
+            }
+        }
+
+        // Show toast message
+        showToast(result.is_favorite ? '任务已收藏' : '任务已取消收藏', 'success');
+    } catch (error) {
+        console.error('Error toggling favorite:', error);
+        showToast('收藏操作失败', 'error');
+    }
 }
 
 // Edit task
@@ -1099,6 +1205,37 @@ function formatDate(dateString) {
         hour: '2-digit',
         minute: '2-digit'
     });
+}
+
+// Helper function to format estimated time
+function formatEstimatedTime(estimatedTimeStr) {
+    if (!estimatedTimeStr) return '';
+    
+    try {
+        let estimatedTime;
+        if (typeof estimatedTimeStr === 'string') {
+            estimatedTime = JSON.parse(estimatedTimeStr);
+        } else {
+            estimatedTime = estimatedTimeStr;
+        }
+
+        if (!estimatedTime || !estimatedTime.value || !estimatedTime.unit) return '';
+
+        const { value, unit } = estimatedTime;
+        const units = {
+            h: '小时',
+            d: '天',
+            w: '周',
+            mo: '月',
+            q: '季度',
+            y: '年'
+        };
+
+        return `${value}${units[unit] || unit}`;
+    } catch (e) {
+        console.error('Error parsing estimated time:', e);
+        return '';
+    }
 }
 
 // Helper function to escape HTML
@@ -1786,8 +1923,214 @@ function initApp() {
     // 初始化分页
     initPagination();
     
+    // 初始化情境切换器
+    initContextSwitcher();
+    
+    // 初始化用户头像
+    initUserAvatar();
+    
+    // 初始化用户管理
+    initUserManagement();
+    
     // 加载任务列表
     loadTasks();
     
     console.log('Application initialized successfully');
+}
+
+// ============================================
+// 情境管理 - Context Management
+// ============================================
+
+let currentContext = null;
+let allContexts = [];
+
+/**
+ * 初始化情境切换器
+ */
+async function initContextSwitcher() {
+    const container = document.getElementById('context-switcher');
+    if (!container) return;
+
+    try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            console.log('No auth token found');
+            return;
+        }
+
+        const response = await fetch(`${API_URL.replace('/api/tasks', '/api/contexts')}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            allContexts = data.data || [];
+
+            renderContextSwitcher(container);
+        }
+    } catch (error) {
+        console.error('Error loading contexts:', error);
+    }
+}
+
+/**
+ * 渲染情境切换器
+ */
+function renderContextSwitcher(container) {
+    if (allContexts.length === 0) {
+        container.innerHTML = '<p style="color: #999; font-size: 14px;">暂无情境</p>';
+        return;
+    }
+
+    let html = '<div class="context-switcher-wrapper">';
+    html += '<label style="font-size: 14px; font-weight: 600; margin-right: 10px;">情境：</label>';
+    html += '<select id="context-select" class="context-select" style="padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">';
+    html += '<option value="">所有情境</option>';
+
+    allContexts.forEach(context => {
+        const selected = currentContext === context.id ? 'selected' : '';
+        html += `<option value="${context.id}" ${selected}>${escapeHtml(context.name)}</option>`;
+    });
+
+    html += '</select>';
+    html += '</div>';
+
+    container.innerHTML = html;
+
+    // 添加事件监听
+    const select = document.getElementById('context-select');
+    if (select) {
+        select.addEventListener('change', (e) => {
+            currentContext = e.target.value || null;
+            currentPage = 1;
+            loadTasks();
+        });
+    }
+}
+
+// ============================================
+// 用户头像 - User Avatar
+// ============================================
+
+/**
+ * 初始化用户头像
+ */
+async function initUserAvatar() {
+    const container = document.getElementById('user-avatar');
+    if (!container) return;
+
+    try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+
+        const response = await fetch(`${API_URL.replace('/api/tasks', '/api/users/profile')}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const user = data.data;
+
+            renderUserAvatar(container, user);
+        }
+    } catch (error) {
+        console.error('Error loading user profile:', error);
+    }
+}
+
+/**
+ * 渲染用户头像
+ */
+function renderUserAvatar(container, user) {
+    const initials = (user.nickname || user.name || user.email || 'U')
+        .substring(0, 2)
+        .toUpperCase();
+
+    const avatarHtml = user.avatar
+        ? `<img src="${user.avatar}" alt="${escapeHtml(user.nickname || user.name)}">`
+        : `<div class="user-avatar-placeholder" style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">${initials}</div>`;
+
+    const nameHtml = `<span class="user-name">${escapeHtml(user.nickname || user.name || user.email)}</span>`;
+
+    container.innerHTML = `
+        ${avatarHtml}
+        ${nameHtml}
+    `;
+
+    // 点击头像跳转到个人中心
+    container.addEventListener('click', () => {
+        window.location.href = 'user-profile.html';
+    });
+}
+
+// ============================================
+// 用户管理 - User Management
+// ============================================
+
+let allUsers = [];
+
+/**
+ * 获取用户列表
+ */
+async function loadUsers() {
+    try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+
+        const response = await fetch(`${API_URL.replace('/api/tasks', '/api/users')}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            allUsers = data.data || [];
+            populateRoleSelectors();
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+    }
+}
+
+/**
+ * 填充角色选择器
+ */
+function populateRoleSelectors() {
+    const assigneeSelect = document.getElementById('role-assignee');
+    const reporterSelect = document.getElementById('role-reporter');
+    const verifierSelect = document.getElementById('role-verifier');
+
+    if (!assigneeSelect || !reporterSelect || !verifierSelect) return;
+
+    const optionsHtml = '<option value="">未分配</option>' + 
+        allUsers.map(user => `<option value="${user.id}">${escapeHtml(user.name || user.email)}</option>`).join('');
+
+    assigneeSelect.innerHTML = optionsHtml;
+    reporterSelect.innerHTML = optionsHtml;
+    verifierSelect.innerHTML = optionsHtml;
+}
+
+/**
+ * 初始化用户管理
+ */
+function initUserManagement() {
+    // 在表单打开时加载用户列表
+    const formTitle = document.getElementById('form-title');
+    if (formTitle) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.target === formTitle && modal.classList.contains('show')) {
+                    loadUsers();
+                }
+            });
+        });
+
+        observer.observe(formTitle, { childList: true, subtree: true });
+    }
 }
