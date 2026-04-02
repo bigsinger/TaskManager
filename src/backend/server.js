@@ -7,6 +7,7 @@ const path = require('path');
 const passport = require('passport');
 const { 
   initDatabase,
+  run,
   createTenant, getTenantById, getTenantBySubdomain,
   createUser, getUserById, getUserByEmail, updateUserLoginTime,
   createGroup, getGroupById, getGroupsByTenant, getGroupTree,
