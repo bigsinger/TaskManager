@@ -360,7 +360,86 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
   }
 });
 
-// 更新任务
+// 更新任务（部分更新）
+app.patch('/api/tasks/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, status, tags } = req.body;
+    const { id: user_id, tenant_id } = req.user;
+
+    // 检查任务是否存在
+    const existingTask = await getTaskById(id, tenant_id);
+    if (!existingTask) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // 构建更新对象（只更新提供的字段）
+    const updates = {};
+    const oldValues = {};
+
+    if (title !== undefined) {
+      if (!title || title.trim() === '') {
+        return res.status(400).json({ error: 'Title is required' });
+      }
+      if (title.length > 200) {
+        return res.status(400).json({ error: 'Title must be less than 200 characters' });
+      }
+      updates.title = title.trim();
+      oldValues.title = existingTask.title;
+    }
+
+    if (description !== undefined) {
+      if (description && description.length > 1000) {
+        return res.status(400).json({ error: 'Description must be less than 1000 characters' });
+      }
+      updates.description = description;
+      oldValues.description = existingTask.description;
+    }
+
+    if (status !== undefined) {
+      const validStatuses = ['pending', 'in-progress', 'completed'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' });
+      }
+      updates.status = status;
+      oldValues.status = existingTask.status;
+    }
+
+    if (tags !== undefined) {
+      updates.tags = tags;
+      oldValues.tags = existingTask.tags;
+    }
+
+    // 执行更新
+    const fields = Object.keys(updates);
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    const setClause = fields.map(f => `${f} = ?`).join(', ');
+    const values = Object.values(updates);
+    values.push(id, tenant_id);
+
+    await run(
+      `UPDATE tasks SET ${setClause}, updatedAt = ? WHERE id = ? AND tenant_id = ?`,
+      [...values, new Date().toISOString()]
+    );
+
+    // 记录活动
+    for (const field of fields) {
+      await logTaskActivity(id, user_id, 'updated', JSON.stringify(oldValues[field]), JSON.stringify(updates[field]));
+    }
+
+    // 返回更新后的任务
+    const updatedTask = await getTaskById(id, tenant_id);
+    res.json(updatedTask);
+  } catch (error) {
+    console.error('Error updating task:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 更新任务（完整更新）
 app.put('/api/tasks/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;

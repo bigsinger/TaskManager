@@ -629,25 +629,25 @@ header h1 {
     position: relative;
     padding: 6px 10px;
     background: transparent;
-    border: 2px solid #ffc107;
+    border: none;
     border-radius: 8px;
-    color: #ffc107;
-    font-size: 18px;
+    color: #ddd;
+    font-size: 20px;
     cursor: pointer;
     transition: all 0.3s;
     line-height: 1;
 }
 
 .btn-favorite:hover {
-    background: #ffc107;
-    color: white;
-    transform: scale(1.1);
+    background: transparent;
+    color: #ffc107;
+    transform: scale(1.2);
 }
 
 .btn-favorite.active {
-    background: #ffc107;
-    color: white;
-    border-color: #ffc107;
+    background: transparent;
+    color: #ffc107;
+    border: none;
 }
 
 /* Filter Section */

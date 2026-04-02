@@ -18,6 +18,7 @@
     
     <title>TaskManager - 企业级任务管理系统</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="drawer.css">
     
     <!-- 注册 Service Worker -->
     <script>
@@ -166,8 +167,7 @@
                             <label>预计耗时</label>
                             <div id="estimated-time-selector" class="estimated-time-selector-simple">
                                 <div style="display: flex; gap: 8px;">
-                                    <input type="number" id="estimated-time-value" placeholder="数字" min="1" style="flex: 1; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px;">
-                                    <select id="estimated-time-unit" style="padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 6px; min-width: 120px;">
+                                    <input type="number" id="estimated-time-value" placeholder="数字" min="1" style="flex: 1; padding: 10px 14px; border: 2px solid #e5e7eb; border-radius: 6px; min-width: 80px; font-size: 16px;">
                                         <option value="">选择单位</option>
                                         <option value="h">小时</option>
                                         <option value="d">天</option>
@@ -271,5 +271,6 @@
     <script src="csrfService.js"></script>
     <script src="modules/search.js"></script>
     <script src="app.js"></script>
+    <script src="drawer.js"></script>
 </body>
 </html>

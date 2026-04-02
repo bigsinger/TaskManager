@@ -1,0 +1,203 @@
+/* 抽屉式任务卡片样式 */
+
+/* 抽屉容器 */
+.drawer-container {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease;
+}
+
+/* 抽屉内容 */
+.drawer-content {
+  position: relative;
+  z-index: 1;
+  background: var(--task-bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 时间线抽屉 */
+.timeline-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--container-bg);
+  z-index: 2;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+  max-height: 500px;
+}
+
+.timeline-drawer.open {
+  transform: translateX(0);
+}
+
+/* 时间线样式 */
+.timeline {
+  padding: 20px;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.timeline-item:last-child {
+  border-bottom: none;
+}
+
+.timeline-time {
+  min-width: 80px;
+  font-size: 12px;
+  color: var(--task-meta-color);
+  line-height: 1.5;
+}
+
+.timeline-content {
+  flex: 1;
+}
+
+.timeline-action {
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 4px;
+}
+
+.timeline-value {
+  font-size: 14px;
+  color: var(--task-description-color);
+}
+
+/* 状态切换抽屉 */
+.status-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(102, 126, 234, 0.95);
+  z-index: 2;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.status-drawer.open {
+  transform: translateX(0);
+}
+
+/* 状态指示器 */
+.status-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: white;
+}
+
+.status-indicator .status-icon {
+  font-size: 48px;
+  animation: bounce 0.5s ease-in-out;
+}
+
+.status-indicator .status-label {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+/* 拖拽时的样式 */
+.task-item.dragging-right {
+  position: relative;
+  z-index: 10;
+}
+
+.task-item.dragging-right .drawer-content {
+  transform: translateX(var(--drag-x, 0));
+}
+
+.task-item.dragging-left {
+  position: relative;
+  z-index: 10;
+}
+
+.task-item.dragging-left .drawer-content {
+  transform: translateX(var(--drag-x, 0));
+}
+
+/* 拖拽阴影 */
+.drag-shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+/* 时间线关闭按钮 */
+.timeline-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--task-meta-color);
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.timeline-close:hover {
+  background: var(--border-color);
+  color: var(--text-color);
+}
+
+/* 时间线头部 */
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 16px;
+}
+
+.timeline-header h3 {
+  font-size: 18px;
+  color: var(--text-color);
+}
+
+/* 空状态 */
+.timeline-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--task-meta-color);
+}
+
+.timeline-empty .icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}

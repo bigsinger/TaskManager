@@ -625,39 +625,21 @@ function renderTasks(tasks) {
         let tagsArray = [];
         if (task.tags) {
             try {
-                // Debug: log original tags
-                console.log('Original tags:', task.tags, 'Type:', typeof task.tags);
-                
-                // Try JSON parse first
                 let parsed = typeof task.tags === 'string' ? JSON.parse(task.tags) : task.tags;
-                
-                // Debug: log after first parse
-                console.log('After first parse:', parsed, 'Type:', typeof parsed);
-                
-                // If parsed is a string, try parsing again (nested JSON issue)
                 if (typeof parsed === 'string') {
                     parsed = JSON.parse(parsed);
-                    console.log('After second parse:', parsed, 'Type:', typeof parsed);
                 }
-                
-                // If it's an array, use it
                 if (Array.isArray(parsed)) {
                     tagsArray = parsed.filter(tag => tag && typeof tag === 'string' && tag.trim() !== '');
-                }
-                // If it's a string, split by comma
-                else if (typeof parsed === 'string') {
+                } else if (typeof parsed === 'string') {
                     tagsArray = parsed.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
                 }
             } catch (e) {
-                // If all else fails, try comma-separated
                 if (typeof task.tags === 'string') {
                     tagsArray = task.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
                 }
             }
         }
-        
-        // Debug: log final tags
-        console.log('Final tagsArray:', tagsArray);
         
         // Render tags (without brackets)
         const tagsHtml = tagsArray && tagsArray.length > 0 
@@ -667,45 +649,75 @@ function renderTasks(tasks) {
         // Check if this task is selected
         const isSelected = selectedTaskId === task.id;
         
+        // 状态图标和标签
+        const statusIcons = {
+            'pending': '⏳',
+            'in-progress': '🔄',
+            'completed': '✅'
+        };
+        const statusLabels = {
+            'pending': '未开始',
+            'in-progress': '进行中',
+            'completed': '已完成'
+        };
+        
         return `
-        <div class="task-item status-${task.status} ${isSelected ? 'selected' : ''}" 
-             data-task-id="${task.id}"
-             onclick="selectTask('${task.id}')"
-             ondblclick="editTask('${task.id}')">
-            <div class="task-header">
-                <h3 class="task-title">${escapeHtml(task.title)}</h3>
-                ${tagsHtml}
-                ${task.estimated_time ? `
-                    <span class="estimated-time-badge" title="预计耗时">
-                        ⏱️ ${formatEstimatedTime(task.estimated_time)}
+        <div class="drawer-container" data-task-id="${task.id}">
+            <div class="task-item status-${task.status} ${isSelected ? 'selected' : ''} drawer-content"
+                 onclick="selectTask('${task.id}')"
+                 ondblclick="editTask('${task.id}')">
+                <div class="task-header">
+                    <h3 class="task-title">${escapeHtml(task.title)}</h3>
+                    ${tagsHtml}
+                    ${task.estimated_time ? `
+                        <span class="estimated-time-badge" title="预计耗时">
+                            ⏱️ ${formatEstimatedTime(task.estimated_time)}
+                        </span>
+                    ` : ''}
+                    <button class="btn-favorite ${task.is_favorite ? 'active' : ''}"
+                            onclick="event.stopPropagation(); toggleFavorite('${task.id}', ${task.is_favorite || false})"
+                            title="${task.is_favorite ? '取消收藏' : '收藏任务'}">
+                        ${task.is_favorite ? '⭐' : '☆'}
+                    </button>
+                    <span class="status-badge status-${task.status}">
+                        ${t(statusKey)}
                     </span>
-                ` : ''}
-                <button class="btn-favorite ${task.is_favorite ? 'active' : ''}"
-                        onclick="event.stopPropagation(); toggleFavorite('${task.id}', ${task.is_favorite || false})"
-                        title="${task.is_favorite ? '取消收藏' : '收藏任务'}">
-                    ${task.is_favorite ? '⭐' : '☆'}
-                </button>
-                <span class="status-badge status-${task.status}">
-                    ${t(statusKey)}
-                </span>
-                <div class="task-actions">
-                    <button class="btn btn-secondary" onclick="event.stopPropagation(); editTask('${task.id}')">${t('edit')}</button>
-                    <button class="btn btn-danger" onclick="event.stopPropagation(); deleteTask('${task.id}')">${t('delete')}</button>
+                    <div class="task-actions">
+                        <button class="btn btn-secondary" onclick="event.stopPropagation(); editTask('${task.id}')">${t('edit')}</button>
+                        <button class="btn btn-danger" onclick="event.stopPropagation(); deleteTask('${task.id}')">${t('delete')}</button>
+                    </div>
+                </div>
+                <div class="task-description">
+                    ${task.description ? escapeHtml(task.description) : ''}
+                </div>
+                <div class="task-meta">
+                    <span title="创建时间">📅 ${formatDate(task.createdAt)}</span>
+                    ${task.updatedAt && task.updatedAt !== task.createdAt ? 
+                        `<span title="最后修改">✏️ ${formatDate(task.updatedAt)}</span>` : ''}
                 </div>
             </div>
-            <div class="task-description">
-                ${task.description ? escapeHtml(task.description) : ''}
+            <!-- 状态抽屉 -->
+            <div class="status-drawer" data-task-id="${task.id}">
+                <div class="status-indicator">
+                    <div class="status-icon">${statusIcons[task.status] || '⏳'}</div>
+                    <div class="status-label">${statusLabels[task.status] || task.status}</div>
+                </div>
             </div>
-            <div class="task-meta">
-                <span title="创建时间">📅 ${formatDate(task.createdAt)}</span>
-                ${task.updatedAt && task.updatedAt !== task.createdAt ? 
-                    `<span title="最后修改">✏️ ${formatDate(task.updatedAt)}</span>` : ''}
+            <!-- 时间线抽屉 -->
+            <div class="timeline-drawer" data-task-id="${task.id}">
+                <button class="timeline-close" onclick="event.stopPropagation(); closeTimelineDrawer('${task.id}')">&times;</button>
+                <div class="timeline-header">
+                    <h3>任务时间线</h3>
+                </div>
+                <div class="timeline" id="timeline-${task.id}">
+                    <div class="timeline-empty">
+                        <div class="icon">📝</div>
+                        <p>加载中...</p>
+                    </div>
+                </div>
             </div>
         </div>
     `}).join('');
-    
-    // 初始化手势交互
-    initGestureInteraction();
 }
 
 // Show task form
