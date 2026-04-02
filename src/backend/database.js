@@ -475,7 +475,7 @@ async function checkPermission(user_id, permission, tenant_id) {
 
 // ==================== 任务相关（更新版） ====================
 
-async function getTasks({ tenant_id, group_id, page = 1, limit = 20, status, assignee_id, sortBy = 'status', sortOrder = 'asc' }) {
+async function getTasks({ tenant_id, group_id, context_id, page = 1, limit = 20, status, assignee_id, sortBy = 'status', sortOrder = 'asc' }) {
   const offset = (page - 1) * limit;
   const conditions = ['t.tenant_id = ?'];
   const params = [tenant_id];
@@ -483,6 +483,11 @@ async function getTasks({ tenant_id, group_id, page = 1, limit = 20, status, ass
   if (group_id) {
     conditions.push('t.group_id = ?');
     params.push(group_id);
+  }
+
+  if (context_id) {
+    conditions.push('t.context_id = ?');
+    params.push(context_id);
   }
 
   if (status) {

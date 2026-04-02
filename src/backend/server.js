@@ -246,15 +246,16 @@ app.get('/api/auth/me', async (req, res) => {
 // 获取任务列表
 app.get('/api/tasks', authenticateToken, async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, tags, sort, order } = req.query;
+    const { page = 1, limit = 20, status, tags, sort, order, context_id } = req.query;
     const { tenant_id } = req.user;
-    
+
     // 验证参数
     const parsedPage = Math.max(1, parseInt(page) || 1);
     const parsedLimit = Math.min(100, Math.max(1, parseInt(limit) || 20));
 
     const result = await getTasks({
       tenant_id,
+      context_id: context_id || undefined,
       page: parsedPage,
       limit: parsedLimit,
       status,
@@ -284,6 +285,31 @@ app.get('/api/tasks/:id', authenticateToken, async (req, res) => {
     res.json(task);
   } catch (error) {
     console.error('Error getting task:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// 获取任务活动日志
+app.get('/api/tasks/:id/activities', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tenant_id } = req.user;
+    
+    // 验证任务是否存在
+    const task = await getTaskById(id, tenant_id);
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    
+    // 获取活动日志
+    const activities = await getTaskActivities(id);
+    
+    res.json({
+      success: true,
+      data: activities || []
+    });
+  } catch (error) {
+    console.error('Error getting task activities:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

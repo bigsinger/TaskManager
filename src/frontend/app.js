@@ -204,6 +204,14 @@ let currentTags = [];
 let selectedTaskId = null;
 let showOnlyFavorites = false;
 
+// 手势交互
+let isDragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragTaskElement = null;
+let dragTaskId = null;
+const SWIPE_THRESHOLD = 50; // 滑动阈值（像素）
+
 // Load tasks on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadTasks();
@@ -695,6 +703,9 @@ function renderTasks(tasks) {
             </div>
         </div>
     `}).join('');
+    
+    // 初始化手势交互
+    initGestureInteraction();
 }
 
 // Show task form
@@ -1018,11 +1029,83 @@ async function loadTaskData(taskId) {
             currentTags = [];
         }
         
+        // 加载角色信息
+        if (task.assignee_id) {
+            document.getElementById('role-assignee').value = task.assignee_id;
+        }
+        if (task.reporter_id) {
+            document.getElementById('role-reporter').value = task.reporter_id;
+        }
+        if (task.verifier_id) {
+            document.getElementById('role-verifier').value = task.verifier_id;
+        }
+        
+        // 加载用户列表（用于角色选择）
+        await loadUsers();
+        
+        // 加载任务时间线
+        await loadTaskTimeline(taskId);
+        
         renderTags();
     } catch (error) {
         console.error('Error loading task:', error);
         alert(`${t('loadError')}\n\n${error.message}`);
         hideForm();
+    }
+}
+
+/**
+ * 加载任务时间线
+ */
+async function loadTaskTimeline(taskId) {
+    const timelineSection = document.getElementById('task-timeline-section');
+    const timelineContainer = document.getElementById('task-timeline-container');
+    
+    if (!timelineSection || !timelineContainer) return;
+    
+    try {
+        const headers = addAuthHeader();
+        const response = await fetch(`${API_URL}/${taskId}/activities`, { headers });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const activities = data.data || [];
+            
+            // 显示时间线
+            timelineSection.style.display = 'block';
+            
+            if (activities.length === 0) {
+                timelineContainer.innerHTML = '<p style="color: #999; font-size: 14px;">暂无活动记录</p>';
+            } else {
+                timelineContainer.innerHTML = activities.map(activity => {
+                    const actionLabels = {
+                        'created': '创建任务',
+                        'updated': '更新任务',
+                        'deleted': '删除任务',
+                        'status_changed': '状态变更',
+                        'commented': '评论',
+                        'assigned': '分配',
+                        'favorited': '收藏',
+                        'unfavorited': '取消收藏'
+                    };
+                    
+                    const actionLabel = actionLabels[activity.action] || activity.action;
+                    const time = formatDate(activity.createdAt);
+                    
+                    return `
+                        <div class="timeline-item">
+                            <div class="timeline-time">${time}</div>
+                            <div class="timeline-action">${actionLabel}</div>
+                            ${activity.new_value ? `<div class="timeline-value">${escapeHtml(activity.new_value)}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        } else {
+            console.error('Failed to load task timeline');
+        }
+    } catch (error) {
+        console.error('Error loading task timeline:', error);
     }
 }
 
@@ -2134,3 +2217,208 @@ function initUserManagement() {
         observer.observe(formTitle, { childList: true, subtree: true });
     }
 }
+
+// ============================================
+// 手势交互 - Gesture Interaction
+// ============================================
+
+/**
+ * 初始化手势交互
+ */
+function initGestureInteraction() {
+    const taskList = document.getElementById('task-list');
+    if (!taskList) return;
+
+    // 触摸事件（移动端）
+    taskList.addEventListener('touchstart', handleTouchStart, { passive: true });
+    taskList.addEventListener('touchmove', handleTouchMove, { passive: false });
+    taskList.addEventListener('touchend', handleTouchEnd);
+
+    // 鼠标事件（PC端）
+    taskList.addEventListener('mousedown', handleMouseDown);
+    taskList.addEventListener('mousemove', handleMouseMove);
+    taskList.addEventListener('mouseup', handleMouseUp);
+    taskList.addEventListener('mouseleave', handleMouseLeave);
+}
+
+/**
+ * 触摸开始
+ */
+function handleTouchStart(e) {
+    const taskItem = e.target.closest('.task-item');
+    if (!taskItem) return;
+
+    isDragging = true;
+    dragStartX = e.touches[0].clientX;
+    dragStartY = e.touches[0].clientY;
+    dragTaskElement = taskItem;
+    dragTaskId = taskItem.getAttribute('data-task-id');
+}
+
+/**
+ * 触摸移动
+ */
+function handleTouchMove(e) {
+    if (!isDragging) return;
+    e.preventDefault(); // 防止滚动
+}
+
+/**
+ * 触摸结束
+ */
+function handleTouchEnd(e) {
+    if (!isDragging) return;
+
+    const endX = e.changedTouches[0].clientX;
+    const deltaX = endX - dragStartX;
+
+    if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+        const task = allTasks.find(t => t.id === dragTaskId);
+        if (task) {
+            if (deltaX > 0) {
+                // 右滑：切换任务状态
+                handleSwipeRight(task);
+            } else {
+                // 左滑：显示时间线
+                handleSwipeLeft(task);
+            }
+        }
+    }
+
+    resetDragState();
+}
+
+/**
+ * 鼠标按下
+ */
+function handleMouseDown(e) {
+    const taskItem = e.target.closest('.task-item');
+    if (!taskItem) return;
+
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragTaskElement = taskItem;
+    dragTaskId = taskItem.getAttribute('data-task-id');
+}
+
+/**
+ * 鼠标移动
+ */
+function handleMouseMove(e) {
+    if (!isDragging) return;
+}
+
+/**
+ * 鼠标释放
+ */
+function handleMouseUp(e) {
+    if (!isDragging) return;
+
+    const deltaX = e.clientX - dragStartX;
+
+    if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+        const task = allTasks.find(t => t.id === dragTaskId);
+        if (task) {
+            if (deltaX > 0) {
+                // 右滑：切换任务状态
+                handleSwipeRight(task);
+            } else {
+                // 左滑：显示时间线
+                handleSwipeLeft(task);
+            }
+        }
+    }
+
+    resetDragState();
+}
+
+/**
+ * 鼠标离开
+ */
+function handleMouseLeave(e) {
+    if (!isDragging) return;
+    resetDragState();
+}
+
+/**
+ * 处理右滑（切换任务状态）
+ */
+function handleSwipeRight(task) {
+    console.log('Swipe right on task:', task.id);
+
+    // 循环切换状态：pending → in-progress → completed → pending
+    const statusCycle = ['pending', 'in-progress', 'completed'];
+    const currentIndex = statusCycle.indexOf(task.status);
+    const nextIndex = (currentIndex + 1) % statusCycle.length;
+    const newStatus = statusCycle[nextIndex];
+
+    // 更新任务状态
+    updateTaskStatus(task.id, newStatus);
+
+    // 显示提示
+    const statusLabels = {
+        'pending': '未开始',
+        'in-progress': '进行中',
+        'completed': '已完成'
+    };
+    showToast(`状态已切换为：${statusLabels[newStatus]}`, 'success');
+}
+
+/**
+ * 处理左滑（显示时间线）
+ */
+function handleSwipeLeft(task) {
+    console.log('Swipe left on task:', task.id);
+
+    // 打开任务编辑对话框，显示时间线
+    editTask(task.id);
+
+    // 显示提示
+    showToast('查看任务时间线', 'info');
+}
+
+/**
+ * 更新任务状态
+ */
+async function updateTaskStatus(taskId, newStatus) {
+    try {
+        const task = allTasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        const headers = addAuthHeader({
+            'Content-Type': 'application/json'
+        });
+
+        const response = await fetch(`${API_URL}/${taskId}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (response.ok) {
+            // 更新本地任务状态
+            task.status = newStatus;
+            renderTasks(allTasks);
+        } else {
+            showToast('更新失败', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating task status:', error);
+        showToast('更新失败', 'error');
+    }
+}
+
+/**
+ * 重置拖拽状态
+ */
+function resetDragState() {
+    isDragging = false;
+    dragStartX = 0;
+    dragStartY = 0;
+    dragTaskElement = null;
+    dragTaskId = null;
+}
+
+// 初始化手势交互
+initGestureInteraction();
